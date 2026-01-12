@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { getAllDatabases } from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
@@ -32,8 +33,7 @@ export async function GET() {
     }
 
     // Get PostgreSQL databases info (from database records)
-    const db = require('@/lib/db').default;
-    const databases = db.prepare('SELECT * FROM databases ORDER BY created_at DESC').all();
+    const databases = getAllDatabases();
 
     // Get sizes for each PostgreSQL database
     const databasesWithSize = await Promise.all(
