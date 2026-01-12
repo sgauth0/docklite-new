@@ -1,0 +1,17 @@
+[Unit]
+Description=DockLite Web (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=docklite
+Group=docklite
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=/etc/docklite/docklite-web.env
+Environment=PORT=3001
+ExecStart=__INSTALL_DIR__/node_modules/.bin/next start -H 0.0.0.0 -p 3001
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

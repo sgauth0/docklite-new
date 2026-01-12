@@ -1,0 +1,492 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap');
+
+@layer base {
+  :root {
+    --bg-dark: #0a0a1e;
+    --bg-darker: #050510;
+    --bg-card: #1a0a2e;
+    --neon-cyan: #4fd6ff;
+    --neon-pink: #ff6bd6;
+    --neon-purple: #7b5cff;
+    --neon-green: #6bffb0;
+    --neon-yellow: #ffe66d;
+    --text-primary: #e0e0ff;
+    --text-secondary: #a0a0c0;
+    --text-muted: #707090;
+  }
+
+  body {
+    background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, #1a0a2e 100%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: 0.3px;
+  }
+
+  /* Better typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 2rem;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+
+  /* Better focus states */
+  button:focus,
+  input:focus,
+  a:focus {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .neon-text {
+    text-shadow: 0 0 3px currentColor, 0 0 6px currentColor;
+  }
+
+  .neon-text-pink {
+    color: var(--neon-pink);
+    text-shadow: 0 0 3px var(--neon-pink), 0 0 6px var(--neon-pink);
+  }
+
+  .neon-text-cyan {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 3px var(--neon-cyan), 0 0 6px var(--neon-cyan);
+  }
+
+  .neon-border {
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 3px var(--neon-cyan), inset 0 0 3px var(--neon-cyan);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 6px var(--neon-pink), 0 0 12px var(--neon-pink), 0 0 18px var(--neon-pink);
+  }
+
+  .card-vapor {
+    background: linear-gradient(135deg, rgba(26, 10, 46, 0.95) 0%, rgba(10, 5, 30, 0.9) 100%);
+    border: 1px solid rgba(255, 107, 214, 0.25);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-neon {
+    background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+    color: var(--bg-darker);
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    text-shadow: none;
+    box-shadow: 0 2px 10px rgba(123, 92, 255, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.875rem;
+    letter-spacing: 0.3px;
+    border: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-neon:hover {
+    box-shadow: 0 4px 16px rgba(79, 214, 255, 0.35), 0 6px 22px rgba(123, 92, 255, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .btn-neon:active {
+    transform: translateY(0);
+  }
+
+  /* Button shine effect */
+  .btn-neon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .btn-neon:hover::before {
+    left: 100%;
+  }
+
+  .cyber-card {
+    background: linear-gradient(135deg, rgba(26, 10, 46, 0.95) 0%, rgba(10, 5, 30, 0.9) 100%);
+    border: 1px solid rgba(255, 16, 240, 0.3);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .cyber-button {
+    background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+    color: var(--bg-darker);
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 2px 12px rgba(181, 55, 242, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+  }
+
+  .cyber-button:hover {
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .cyber-button-sm {
+    background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+    color: var(--bg-darker);
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 8px rgba(181, 55, 242, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
+  }
+
+  .cyber-button-sm:hover {
+    box-shadow: 0 4px 16px rgba(0, 255, 255, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .input-vapor {
+    background: rgba(10, 5, 30, 0.8);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    color: var(--text-primary);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.3px;
+  }
+
+  .input-vapor:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.1);
+    background: rgba(26, 10, 46, 0.9);
+  }
+
+  .input-vapor::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  .badge-running {
+    background: linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%);
+    color: var(--bg-darker);
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-shadow: none;
+    box-shadow: 0 2px 8px rgba(57, 255, 20, 0.3);
+    letter-spacing: 0.5px;
+  }
+
+  .badge-stopped {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff10f0 100%);
+    color: white;
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(255, 16, 240, 0.3);
+    letter-spacing: 0.5px;
+  }
+
+  .glitch {
+    animation: glitch 1s infinite;
+  }
+
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+  }
+
+  .retro-grid {
+    background-image:
+      linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-position: center center;
+  }
+
+  /* Subtle scanline effect - safer implementation */
+  .scanlines {
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 4px, 4px 100%;
+  }
+
+  /* Flicker effect for neon elements */
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.95; }
+  }
+
+  .flicker {
+    animation: flicker 2s infinite;
+  }
+
+  /* Enhanced glow for ultrawide */
+  .ultra-glow {
+    box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-purple), 0 0 30px var(--neon-pink);
+  }
+
+  /* Enhanced hover effects for cyberpunk feel */
+  .group:hover .group-hover\:scale-110 {
+    transform: scale(1.1);
+  }
+
+  .transition-all {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Better spacing utilities */
+  .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.5rem;
+  }
+
+  .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.5rem;
+  }
+
+  /* Enhanced grid layouts for better responsiveness */
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 640px) {
+    .sm\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .lg\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .xl\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .\32xl\:grid-cols-5 {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  /* Better border utilities */
+  .border-purple-500\/20 {
+    border-color: rgba(181, 55, 242, 0.2);
+  }
+
+  .border-t {
+    border-top-width: 1px;
+  }
+
+  /* Custom scrollbar for cyberpunk theme */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-darker);
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-pink) 100%);
+    border-radius: 6px;
+    border: 2px solid var(--bg-darker);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+  }
+
+  /* Enhanced animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes slideDown {
+    from { 
+      opacity: 0; 
+      transform: translateY(-10px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 10px rgba(79, 214, 255, 0.25), 0 0 20px rgba(123, 92, 255, 0.18); 
+    }
+    50% { 
+      box-shadow: 0 0 16px rgba(79, 214, 255, 0.4), 0 0 32px rgba(123, 92, 255, 0.3); 
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  /* Loading animations */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Toast animations */
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+
+  @keyframes toast-progress {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+
+  /* Enhanced drag and drop visuals */
+  .drag-over {
+    border: 2px dashed var(--neon-cyan) !important;
+    background: rgba(0, 255, 255, 0.1) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4) !important;
+  }
+
+  /* Better mobile responsiveness */
+  @media (max-width: 640px) {
+    .card-vapor {
+      padding: 1rem;
+      margin: 0.5rem;
+    }
+
+    .btn-neon {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Ensure dropdown is properly positioned and visible */
+  .user-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    z-index: 99999 !important;
+    transform: none !important;
+    will-change: transform;
+  }
+
+  /* Force dropdown to be on top of EVERYTHING */
+  nav {
+    position: relative;
+    z-index: 9999 !important;
+  }
+
+  /* Override any potential z-index conflicts */
+  .animate-slide-down {
+    z-index: 999999 !important;
+    position: relative !important;
+  }
+
+  /* Fix retro-grid and scanlines z-index */
+  .retro-grid, .scanlines {
+    position: relative;
+    z-index: 1 !important;
+  }
+
+  /* Ensure main content is below nav */
+  main {
+    position: relative;
+    z-index: 10 !important;
+  }
+
+  /* High DPI display enhancements */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+      font-weight: 400;
+    }
+    
+    .neon-text {
+      text-shadow: 
+        0 0 2px currentColor, 
+        0 0 4px currentColor, 
+        0 0 6px currentColor,
+        0 0 8px currentColor;
+    }
+  }
+}

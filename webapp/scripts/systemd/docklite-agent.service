@@ -1,0 +1,16 @@
+[Unit]
+Description=DockLite Agent
+After=network.target
+
+[Service]
+Type=simple
+User=docklite
+Group=docklite
+WorkingDirectory=__INSTALL_DIR__/go-app
+EnvironmentFile=/etc/docklite/docklite-agent.env
+ExecStart=__INSTALL_DIR__/go-app/docklite-agent
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

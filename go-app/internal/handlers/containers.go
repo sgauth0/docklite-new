@@ -1,0 +1,947 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"docklite-agent/internal/models"
+	"docklite-agent/internal/store"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/go-connections/nat"
+)
+
+const siteBaseDir = "/var/www/sites"
+
+type createContainerRequest struct {
+	Domain       string `json:"domain"`
+	TemplateType string `json:"template_type"`
+	IncludeWww   *bool  `json:"include_www"`
+	Port         *int   `json:"port"`
+	UserID       *int64 `json:"user_id"`
+	CodePath     string `json:"code_path"`
+	FolderID     *int64 `json:"folder_id"`
+}
+
+func (h *Handlers) ListContainers(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		h.createContainer(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	userID, err := readUserID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if userID == nil {
+		writeError(w, http.StatusBadRequest, "userId is required")
+		return
+	}
+	isAdmin := isAdminRole(r)
+
+	folders, err := h.store.GetFoldersByUser(*userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if len(folders) == 0 {
+		folder, err := h.store.CreateFolder(*userID, "Default", nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		folders = []store.Folder{*folder}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	containers, err := h.docker.ListContainers(ctx, true)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	untracked, err := h.store.GetUntrackedContainerIDs()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	untrackedSet := make(map[string]struct{}, len(untracked))
+	for _, id := range untracked {
+		untrackedSet[id] = struct{}{}
+	}
+
+	containersWithOwners := make([]models.ContainerInfo, 0, len(containers))
+	userCache := make(map[int64]string)
+
+	for _, container := range containers {
+		if container.Labels == nil || container.Labels["docklite.managed"] != "true" {
+			continue
+		}
+		if _, ok := untrackedSet[container.ID]; ok {
+			continue
+		}
+		ownerID, ownerName, err := h.resolveContainerOwner(container, userCache)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !isAdmin {
+			if ownerID == 0 || ownerID != *userID {
+				continue
+			}
+		}
+		container.OwnerUsername = ownerName
+		containersWithOwners = append(containersWithOwners, container)
+	}
+
+	containersByFolderID := make(map[int64][]models.ContainerInfo, len(folders))
+	assignedIDs := make(map[string]struct{})
+
+	for _, folder := range folders {
+		containerIDs, err := h.store.GetContainersByFolder(folder.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		idSet := make(map[string]struct{}, len(containerIDs))
+		for _, id := range containerIDs {
+			idSet[id] = struct{}{}
+		}
+		var folderContainers []models.ContainerInfo
+		for _, container := range containersWithOwners {
+			if _, ok := idSet[container.ID]; ok {
+				folderContainers = append(folderContainers, container)
+				assignedIDs[container.ID] = struct{}{}
+			}
+		}
+		containersByFolderID[folder.ID] = folderContainers
+	}
+
+	unassignedContainers := make([]models.ContainerInfo, 0)
+	for _, container := range containersWithOwners {
+		if _, ok := assignedIDs[container.ID]; !ok {
+			unassignedContainers = append(unassignedContainers, container)
+		}
+	}
+
+	for i, folder := range folders {
+		if folder.Name == "Default" && len(unassignedContainers) > 0 {
+			containersByFolderID[folder.ID] = append(containersByFolderID[folder.ID], unassignedContainers...)
+			folders[i] = folder
+			break
+		}
+	}
+
+	folderTree := buildFolderTree(folders, containersByFolderID)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"folders":         folderTree,
+		"totalContainers": len(containersWithOwners),
+	})
+}
+
+func (h *Handlers) ListAllContainers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	containers, err := h.docker.ListContainers(ctx, true)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	untracked, err := h.store.GetUntrackedContainerIDs()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	untrackedSet := make(map[string]struct{}, len(untracked))
+	for _, id := range untracked {
+		untrackedSet[id] = struct{}{}
+	}
+
+	type containerWithTracking struct {
+		models.ContainerInfo
+		Tracked bool `json:"tracked"`
+	}
+
+	results := make([]containerWithTracking, 0, len(containers))
+	for _, container := range containers {
+		_, untracked := untrackedSet[container.ID]
+		results = append(results, containerWithTracking{
+			ContainerInfo: container,
+			Tracked:       !untracked,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"containers": results})
+}
+
+func (h *Handlers) Container(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/containers/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	id := parts[0]
+	action := ""
+	if len(parts) > 1 {
+		action = parts[1]
+	}
+
+	switch action {
+	case "start":
+		h.handleLifecycle(w, r, id, h.docker.StartContainer)
+	case "stop":
+		h.handleLifecycle(w, r, id, h.docker.StopContainer)
+	case "restart":
+		h.handleLifecycle(w, r, id, h.docker.RestartContainer)
+	case "delete":
+		h.handleDelete(w, r, id)
+	case "logs":
+		h.handleLogs(w, r, id)
+	case "stats":
+		h.handleStats(w, r, id)
+	case "inspect":
+		h.handleInspect(w, r, id)
+	case "assign":
+		h.AssignContainer(w, r, id)
+	case "track":
+		h.TrackContainer(w, r, id)
+	case "untrack":
+		h.UntrackContainer(w, r, id)
+	case "":
+		h.handleApp(w, r, id)
+	default:
+		writeError(w, http.StatusNotFound, "not found")
+	}
+}
+
+func (h *Handlers) handleLifecycle(w http.ResponseWriter, r *http.Request, id string, action func(context.Context, string) error) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	site, err := h.authorizeContainerAccess(ctx, r, id)
+	if err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := action(ctx, id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if site != nil {
+		status := "running"
+		if strings.Contains(r.URL.Path, "/stop") {
+			status = "stopped"
+		}
+		_ = h.store.UpdateSiteStatus(site.ID, status)
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+}
+
+func (h *Handlers) handleLogs(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	if _, err := h.authorizeContainerAccess(ctx, r, id); err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	trail := r.URL.Query().Get("tail")
+	if trail == "" {
+		trail = "200"
+	}
+	logs, err := h.docker.ContainerLogs(ctx, id, trail)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"logs": logs})
+}
+
+func (h *Handlers) handleStats(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	if _, err := h.authorizeContainerAccess(ctx, r, id); err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	stats, err := h.docker.ContainerStats(ctx, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]*models.ContainerStats{"stats": stats})
+}
+
+func (h *Handlers) handleInspect(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	container, err := h.docker.InspectContainer(ctx, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := h.authorizeContainerAccess(ctx, r, id, container.Config.Labels); err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"container": inspectInfo(container)})
+}
+
+func (h *Handlers) handleApp(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method == http.MethodDelete {
+		h.handleDelete(w, r, id)
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	container, err := h.docker.InspectContainer(ctx, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := h.authorizeContainerAccess(ctx, r, id, container.Config.Labels); err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var stats *models.ContainerStats
+	if container.State != nil && container.State.Running {
+		stats, _ = h.docker.ContainerStats(ctx, id)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"container": containerInfo(container), "stats": stats})
+}
+
+func (h *Handlers) handleDelete(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodDelete {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	site, err := h.authorizeContainerAccess(ctx, r, id)
+	if err != nil {
+		if err == errForbidden {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := h.docker.RemoveContainer(ctx, id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if site != nil {
+		_ = h.store.DeleteSite(site.ID)
+	}
+	_ = h.store.UnlinkContainerFromAllFolders(id)
+	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+}
+
+func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
+	var req createContainerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	userID, err := readUserID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	isAdmin := isAdminRole(r)
+
+	domain := strings.TrimSpace(req.Domain)
+	if domain == "" {
+		writeError(w, http.StatusBadRequest, "domain is required")
+		return
+	}
+	if strings.Contains(domain, "/") || strings.Contains(domain, "\\") {
+		writeError(w, http.StatusBadRequest, "domain contains invalid characters")
+		return
+	}
+
+	templateType := strings.ToLower(strings.TrimSpace(req.TemplateType))
+	if templateType == "" {
+		templateType = "static"
+	}
+	if templateType != "static" && templateType != "php" && templateType != "node" {
+		writeError(w, http.StatusBadRequest, "unsupported template type")
+		return
+	}
+
+	includeWww := true
+	if req.IncludeWww != nil {
+		includeWww = *req.IncludeWww
+	}
+
+	port := 3000
+	if req.Port != nil {
+		port = *req.Port
+	}
+	if templateType == "node" {
+		if port < 1 || port > 65535 {
+			writeError(w, http.StatusBadRequest, "invalid port")
+			return
+		}
+	}
+
+	var targetUserID int64
+	if isAdmin && req.UserID != nil {
+		targetUserID = *req.UserID
+	} else if userID != nil {
+		targetUserID = *userID
+	} else {
+		writeError(w, http.StatusBadRequest, "user_id is required")
+		return
+	}
+
+	targetUser, err := h.store.GetUserByIDFull(targetUserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if targetUser == nil {
+		writeError(w, http.StatusNotFound, "target user not found")
+		return
+	}
+
+	existingSite, err := h.store.GetSiteByDomain(domain)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var existingContainerID string
+	if existingSite != nil && existingSite.ContainerID != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		if _, err := h.docker.InspectContainer(ctx, *existingSite.ContainerID); err == nil {
+			existingContainerID = *existingSite.ContainerID
+		}
+	}
+
+	sitePath := req.CodePath
+	if sitePath == "" {
+		if existingSite != nil && existingSite.CodePath != "" {
+			sitePath = existingSite.CodePath
+		} else {
+			sitePath = getSitePath(targetUser.Username, domain)
+		}
+	}
+
+	if err := ensureSiteDirectory(targetUser.Username, domain); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if req.CodePath == "" && existingSite == nil {
+		if err := ensureDefaultSiteFiles(sitePath, domain, templateType); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	site := existingSite
+	if site == nil {
+		siteRecord := store.SiteRecord{
+			Domain:       domain,
+			UserID:       targetUserID,
+			TemplateType: templateType,
+			CodePath:     sitePath,
+			FolderID:     req.FolderID,
+		}
+		site, err = h.store.CreateSite(siteRecord)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	if existingContainerID != "" {
+		_ = h.docker.RemoveContainer(ctx, existingContainerID)
+	}
+	containerID, err := h.docker.CreateSiteContainer(ctx, domain, templateType, includeWww, sitePath, port, site.ID, targetUserID, req.FolderID)
+	if err != nil {
+		_ = h.store.UpdateSiteStatus(site.ID, "failed")
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := h.store.UpdateSiteContainerID(site.ID, &containerID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.UpdateSiteStatus(site.ID, "running")
+
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "site_id": site.ID})
+}
+
+func ensureFile(path string, content string) error {
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(path, []byte(content), 0o644)
+}
+
+var errForbidden = errors.New("forbidden")
+
+func (h *Handlers) resolveContainerOwner(container models.ContainerInfo, userCache map[int64]string) (int64, string, error) {
+	var ownerID int64
+	if container.Labels != nil {
+		if label := container.Labels["docklite.user.id"]; label != "" {
+			if parsed, err := strconv.ParseInt(label, 10, 64); err == nil {
+				ownerID = parsed
+			}
+		}
+	}
+
+	site, err := h.store.GetSiteByContainerIDRecord(container.ID)
+	if err != nil {
+		return 0, "", err
+	}
+	if site != nil {
+		ownerID = site.UserID
+	}
+	if ownerID == 0 {
+		return 0, "", nil
+	}
+	if cached, ok := userCache[ownerID]; ok {
+		return ownerID, cached, nil
+	}
+	user, err := h.store.GetUserByIDFull(ownerID)
+	if err != nil {
+		return 0, "", err
+	}
+	if user == nil {
+		return ownerID, "", nil
+	}
+	userCache[ownerID] = user.Username
+	return ownerID, user.Username, nil
+}
+
+func (h *Handlers) authorizeContainerAccess(ctx context.Context, r *http.Request, containerID string, labels ...map[string]string) (*store.SiteRecord, error) {
+	site, err := h.store.GetSiteByContainerIDRecord(containerID)
+	if err != nil {
+		return nil, err
+	}
+	if isAdminRole(r) {
+		return site, nil
+	}
+	userID, ok := readUserIDFromContext(r)
+	if !ok || userID <= 0 {
+		return nil, errForbidden
+	}
+	if site != nil {
+		if site.UserID != userID {
+			return nil, errForbidden
+		}
+		return site, nil
+	}
+
+	labelSet := map[string]string(nil)
+	if len(labels) > 0 {
+		labelSet = labels[0]
+	}
+	if labelSet == nil {
+		container, err := h.docker.InspectContainer(ctx, containerID)
+		if err != nil {
+			return nil, err
+		}
+		labelSet = container.Config.Labels
+	}
+
+	labelUserID := ""
+	if labelSet != nil {
+		labelUserID = labelSet["docklite.user.id"]
+	}
+	if labelUserID == "" || labelUserID != fmt.Sprintf("%d", userID) {
+		return nil, errForbidden
+	}
+	return nil, nil
+}
+
+func containerInfo(container types.ContainerJSON) models.ContainerInfo {
+	createdAt, err := time.Parse(time.RFC3339Nano, container.Created)
+	uptime := "-"
+	if err == nil && container.State != nil && container.State.Running {
+		uptime = formatUptime(time.Since(createdAt))
+	}
+	state := "stopped"
+	status := ""
+	if container.State != nil {
+		status = container.State.Status
+		if container.State.Running {
+			state = "running"
+		}
+	}
+	labels := map[string]string{}
+	image := ""
+	if container.Config != nil {
+		image = container.Config.Image
+		if container.Config.Labels != nil {
+			labels = container.Config.Labels
+		}
+	}
+	ports := "-"
+	if container.NetworkSettings != nil {
+		ports = formatPortsFromInspect(container.NetworkSettings.Ports)
+	}
+	name := strings.TrimPrefix(container.Name, "/")
+	return models.ContainerInfo{
+		ID:      container.ID,
+		Name:    name,
+		Image:   image,
+		Created: createdAt.Unix(),
+		State:   state,
+		Status:  status,
+		Uptime:  uptime,
+		Ports:   ports,
+		Labels:  labels,
+	}
+}
+
+func inspectInfo(container types.ContainerJSON) map[string]any {
+	labels := map[string]string{}
+	env := []string{}
+	image := ""
+	if container.Config != nil {
+		image = container.Config.Image
+		if container.Config.Labels != nil {
+			labels = container.Config.Labels
+		}
+		if container.Config.Env != nil {
+			env = container.Config.Env
+		}
+	}
+	networkSettings := map[string]any{
+		"networks": map[string]any{},
+		"ports":    nat.PortMap{},
+		"ipAddress": func() string {
+			if container.NetworkSettings != nil {
+				return container.NetworkSettings.IPAddress
+			}
+			return ""
+		}(),
+		"gateway": func() string {
+			if container.NetworkSettings != nil {
+				return container.NetworkSettings.Gateway
+			}
+			return ""
+		}(),
+	}
+	if container.NetworkSettings != nil {
+		networkSettings["networks"] = container.NetworkSettings.Networks
+		networkSettings["ports"] = container.NetworkSettings.Ports
+	}
+	resources := map[string]any{
+		"memory":     0,
+		"memorySwap": 0,
+		"cpuShares":  0,
+		"cpuQuota":   0,
+	}
+	restartPolicy := map[string]any{}
+	if container.HostConfig != nil {
+		restartPolicy = map[string]any{
+			"Name":              container.HostConfig.RestartPolicy.Name,
+			"MaximumRetryCount": container.HostConfig.RestartPolicy.MaximumRetryCount,
+		}
+		resources = map[string]any{
+			"memory":     container.HostConfig.Memory,
+			"memorySwap": container.HostConfig.MemorySwap,
+			"cpuShares":  container.HostConfig.CPUShares,
+			"cpuQuota":   container.HostConfig.CPUQuota,
+		}
+	}
+	return map[string]any{
+		"id":              container.ID,
+		"name":            strings.TrimPrefix(container.Name, "/"),
+		"image":           image,
+		"created":         container.Created,
+		"state":           container.State,
+		"env":             env,
+		"labels":          labels,
+		"mounts":          container.Mounts,
+		"networkSettings": networkSettings,
+		"restartPolicy":   restartPolicy,
+		"resources":       resources,
+	}
+}
+
+func formatUptime(duration time.Duration) string {
+	seconds := int64(duration.Seconds())
+	if seconds < 0 {
+		seconds = 0
+	}
+	minutes := seconds / 60
+	hours := minutes / 60
+	days := hours / 24
+
+	switch {
+	case days > 0:
+		return fmt.Sprintf("%dd %dh", days, hours%24)
+	case hours > 0:
+		return fmt.Sprintf("%dh %dm", hours, minutes%60)
+	case minutes > 0:
+		return fmt.Sprintf("%dm", minutes)
+	default:
+		return fmt.Sprintf("%ds", seconds)
+	}
+}
+
+func formatPortsFromInspect(ports nat.PortMap) string {
+	if ports == nil {
+		return "-"
+	}
+	mappings := make([]string, 0)
+	for containerPort, hostPorts := range ports {
+		if hostPorts == nil || len(hostPorts) == 0 {
+			continue
+		}
+		hostPort := hostPorts[0].HostPort
+		cleanPort := strings.TrimSuffix(string(containerPort), "/tcp")
+		cleanPort = strings.TrimSuffix(cleanPort, "/udp")
+		mappings = append(mappings, fmt.Sprintf("%s->%s", hostPort, cleanPort))
+	}
+	if len(mappings) == 0 {
+		return "-"
+	}
+	return strings.Join(mappings, ", ")
+}
+
+func buildFolderTree(folders []store.Folder, containersByFolderID map[int64][]models.ContainerInfo) []*folderNode {
+	folderMap := make(map[int64]*folderNode, len(folders))
+	for _, folder := range folders {
+		node := &folderNode{
+			Folder:     folder,
+			Children:   []*folderNode{},
+			Containers: containersByFolderID[folder.ID],
+		}
+		folderMap[folder.ID] = node
+	}
+
+	var roots []*folderNode
+	for _, folder := range folders {
+		node := folderMap[folder.ID]
+		if folder.ParentFolderID == nil {
+			roots = append(roots, node)
+			continue
+		}
+		parent := folderMap[*folder.ParentFolderID]
+		if parent != nil {
+			parent.Children = append(parent.Children, node)
+		} else {
+			roots = append(roots, node)
+		}
+	}
+
+	sortByPosition(roots)
+	return roots
+}
+
+type folderNode struct {
+	store.Folder
+	Children   []*folderNode          `json:"children"`
+	Containers []models.ContainerInfo `json:"containers"`
+}
+
+func sortByPosition(nodes []*folderNode) {
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].Position < nodes[j].Position
+	})
+	for _, node := range nodes {
+		sortByPosition(node.Children)
+	}
+}
+
+func getSitePath(username string, domain string) string {
+	return filepath.Join(siteBaseDir, username, domain)
+}
+
+func ensureSiteDirectory(username string, domain string) error {
+	sitePath := getSitePath(username, domain)
+	if err := os.MkdirAll(sitePath, 0o755); err != nil {
+		return fmt.Errorf("failed to create site directory: %w", err)
+	}
+	_ = os.Chmod(sitePath, 0o755)
+	if uid := os.Getuid(); uid >= 0 {
+		_ = os.Chown(sitePath, uid, os.Getgid())
+	}
+	return nil
+}
+
+func ensureDefaultSiteFiles(sitePath string, domain string, templateType string) error {
+	candidateFiles := []string{"index.html", "index.php", "index.js"}
+	for _, name := range candidateFiles {
+		if _, err := os.Stat(filepath.Join(sitePath, name)); err == nil {
+			return nil
+		}
+	}
+
+	switch templateType {
+	case "php":
+		return ensureFile(filepath.Join(sitePath, "index.php"), phpTemplate(sitePath, domain))
+	case "node":
+		if err := ensureFile(filepath.Join(sitePath, "package.json"), nodePackageJSON(domain)); err != nil {
+			return err
+		}
+		return ensureFile(filepath.Join(sitePath, "index.js"), nodeTemplate(sitePath, domain))
+	default:
+		return ensureFile(filepath.Join(sitePath, "index.html"), staticTemplate(sitePath, domain))
+	}
+}
+
+func staticTemplate(sitePath string, domain string) string {
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>` + domain + `</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; }
+        .info { background: #f0f0f0; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to ` + domain + `</h1>
+    <div class="info">
+        <p>This is a static site managed by DockLite.</p>
+        <p><strong>Site Path:</strong> <code>` + sitePath + `</code></p>
+        <p>You can edit this file to customize your site.</p>
+    </div>
+</body>
+</html>`
+}
+
+func phpTemplate(sitePath string, domain string) string {
+	return `<?php
+/**
+ * ` + domain + `
+ * PHP site managed by DockLite
+ * Site path: ` + sitePath + `
+ */
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo '` + domain + `'; ?></title>
+</head>
+<body>
+    <h1>Welcome to <?php echo '` + domain + `'; ?></h1>
+    <p>This is a PHP site managed by DockLite.</p>
+</body>
+</html>`
+}
+
+func nodePackageJSON(domain string) string {
+	payload := map[string]any{
+		"name":        strings.ReplaceAll(domain, ".", "-"),
+		"version":     "1.0.0",
+		"description": fmt.Sprintf("Node.js site for %s", domain),
+		"main":        "index.js",
+		"scripts": map[string]string{
+			"start": "node index.js",
+		},
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
+func nodeTemplate(sitePath string, domain string) string {
+	return `const http = require('http');
+
+const hostname = '0.0.0.0';
+const port = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/html');
+  res.end(` + "`" + `
+    <!DOCTYPE html>
+    <html>
+      <head><title>` + domain + `</title></head>
+      <body>
+        <h1>Welcome to ` + domain + `</h1>
+        <p>Node.js site managed by DockLite</p>
+        <p>Site path: ` + sitePath + `</p>
+      </body>
+    </html>
+  ` + "`" + `);
+});
+
+server.listen(port, hostname, () => {
+  console.log(` + "`" + `Server running at http://${hostname}:${port}/` + "`" + `);
+});`
+}
