@@ -43,6 +43,12 @@ export default function FileManager({ userSession, embedded = false }: FileManag
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
+  const normalizeEntries = (data: any): FileEntry[] => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.entries)) return data.entries;
+    return [];
+  };
+
   useEffect(() => {
     fetchFiles();
   }, [currentPath]);
@@ -68,7 +74,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
         throw new Error(await res.text());
       }
       const data = await res.json();
-      setFiles(data);
+      setFiles(normalizeEntries(data));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -225,7 +231,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
         throw new Error(text || 'Failed to load folder');
       }
       const data = await res.json();
-      setPickerEntries((data || []).filter((entry: FileEntry) => entry.isDirectory));
+      setPickerEntries(normalizeEntries(data).filter((entry: FileEntry) => entry.isDirectory));
     } catch (err: any) {
       setPickerError(err.message || 'Failed to load folders');
     } finally {

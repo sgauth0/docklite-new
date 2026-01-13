@@ -74,6 +74,11 @@ func (h *Handlers) createDatabase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := h.store.UpsertDatabase(sanitized, id, assignedPort); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"database": map[string]any{
 			"id":       id,

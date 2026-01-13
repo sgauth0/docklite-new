@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"docklite-agent/internal/store"
 )
 
 var identifierPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
@@ -19,9 +23,13 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	if !isAdminRole(r) {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
-		return
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if dockerDatabases, err := h.docker.ListDatabases(ctx); err == nil {
+		for _, db := range dockerDatabases {
+			_, _ = h.store.UpsertDatabase(db.Name, db.ID, db.Port)
+		}
 	}
 
 	dbPath := h.store.Path
@@ -39,7 +47,17 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		tableCount = 0
 	}
 
-	records, err := h.store.ListDatabases()
+	var records []store.DatabaseRecord
+	if isAdminRole(r) {
+		records, err = h.store.ListDatabases()
+	} else {
+		userID, _ := readUserID(r)
+		if userID == nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		records, err = h.store.ListDatabasesByUser(*userID)
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

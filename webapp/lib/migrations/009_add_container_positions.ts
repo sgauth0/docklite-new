@@ -4,13 +4,18 @@ export const version = '009';
 export const name = 'add_container_positions';
 
 export function up(db: Database.Database): void {
-  // Add position column to folder_containers table
-  // SQLite doesn't allow adding NOT NULL columns without a default,
-  // so we add it as nullable first, populate it, then we can enforce it
-  db.exec(`
-    ALTER TABLE folder_containers
-    ADD COLUMN position INTEGER
-  `);
+  const columns = db.prepare(`PRAGMA table_info(folder_containers)`).all() as { name: string }[];
+  const hasPosition = columns.some((column) => column.name === 'position');
+
+  if (!hasPosition) {
+    // Add position column to folder_containers table
+    // SQLite doesn't allow adding NOT NULL columns without a default,
+    // so we add it as nullable first, populate it, then we can enforce it
+    db.exec(`
+      ALTER TABLE folder_containers
+      ADD COLUMN position INTEGER
+    `);
+  }
 
   // Assign positions to existing containers based on created_at order
   // Group by folder_id and order by created_at within each folder
@@ -24,7 +29,7 @@ export function up(db: Database.Database): void {
       ORDER BY created_at ASC
     `).all(folder_id) as { id: number; container_id: string }[];
 
-    const updatePosition = db.prepare('UPDATE folder_containers SET position = ? WHERE id = ?');
+    const updatePosition = db.prepare('UPDATE folder_containers SET position = ? WHERE id = ? AND position IS NULL');
 
     containers.forEach((container, index) => {
       updatePosition.run(index, container.id);
@@ -37,7 +42,11 @@ export function up(db: Database.Database): void {
     ON folder_containers(folder_id, position)
   `);
 
-  console.log('✓ Added position column to folder_containers and migrated existing data');
+  if (hasPosition) {
+    console.log('✓ Position column already present; ensured ordering metadata');
+  } else {
+    console.log('✓ Added position column to folder_containers and migrated existing data');
+  }
 }
 
 export function down(db: Database.Database): void {
