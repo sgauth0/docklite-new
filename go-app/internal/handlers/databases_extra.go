@@ -1,8 +1,12 @@
 package handlers
 
 import (
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,18 +14,54 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"docklite-agent/internal/store"
 )
 
 var identifierPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+const (
+	databaseRetentionRoot  = "/var/backups/docklite/databases"
+	databaseRetentionCount = 7
+)
+
+type lazyHeaderWriter struct {
+	writer      http.ResponseWriter
+	headers     map[string]string
+	wroteHeader bool
+	bytes       int64
+}
+
+func (l *lazyHeaderWriter) Write(p []byte) (int, error) {
+	if !l.wroteHeader {
+		for key, value := range l.headers {
+			l.writer.Header().Set(key, value)
+		}
+		l.writer.WriteHeader(http.StatusOK)
+		l.wroteHeader = true
+	}
+	n, err := l.writer.Write(p)
+	l.bytes += int64(n)
+	return n, err
+}
+
+func (l *lazyHeaderWriter) BytesWritten() int64 {
+	return l.bytes
+}
 
 func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	if !isAdminRole(r) {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
-		return
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if dockerDatabases, err := h.docker.ListDatabases(ctx); err == nil {
+		for _, db := range dockerDatabases {
+			_, _ = h.store.UpsertDatabase(db.Name, db.ID, db.Port)
+		}
 	}
 
 	dbPath := h.store.Path
@@ -39,7 +79,17 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		tableCount = 0
 	}
 
-	records, err := h.store.ListDatabases()
+	var records []store.DatabaseRecord
+	if isAdminRole(r) {
+		records, err = h.store.ListDatabases()
+	} else {
+		userID, _ := readUserID(r)
+		if userID == nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		records, err = h.store.ListDatabasesByUser(*userID)
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -121,6 +171,8 @@ func (h *Handlers) DatabaseRoutes(w http.ResponseWriter, r *http.Request) {
 		h.DatabaseSchema(w, r, dbID)
 	case "table":
 		h.DatabaseTable(w, r, dbID)
+	case "download":
+		h.DatabaseDownload(w, r, dbID)
 	default:
 		writeError(w, http.StatusNotFound, "not found")
 	}
@@ -508,6 +560,199 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
 		"columns": formattedColumns,
 		"rows":    rows,
 	})
+}
+
+func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, databaseID int64) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if !isAdminRole(r) {
+		userID, err := readUserID(r)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid user id")
+			return
+		}
+		if userID == nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		allowed, err := h.store.HasDatabaseAccess(*userID, databaseID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !allowed {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+	}
+
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Gzip     *bool  `json:"gzip"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Username == "" || body.Password == "" {
+		writeError(w, http.StatusBadRequest, "username and password are required")
+		return
+	}
+	gzipEnabled := true
+	if body.Gzip != nil {
+		gzipEnabled = *body.Gzip
+	}
+
+	database, err := h.store.GetDatabaseByID(databaseID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if database == nil || database.ContainerID == "" {
+		writeError(w, http.StatusNotFound, "database not found")
+		return
+	}
+
+	if _, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, "SELECT 1", false); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid database credentials")
+		return
+	}
+
+	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05Z")
+	baseName := fmt.Sprintf("docklite-%s-%s", database.Name, timestamp)
+	downloadName := fmt.Sprintf("%s.dump", baseName)
+	if gzipEnabled {
+		downloadName = fmt.Sprintf("%s.dump.gz", baseName)
+	}
+
+	responseWriter := &lazyHeaderWriter{
+		writer: w,
+		headers: map[string]string{
+			"Content-Type":        "application/octet-stream",
+			"Content-Disposition": fmt.Sprintf("attachment; filename=%q", downloadName),
+		},
+	}
+
+	retentionEnabled := true
+	if err := os.MkdirAll(databaseRetentionRoot, 0o755); err != nil {
+		retentionEnabled = false
+		log.Printf("database retention disabled: %v", err)
+	}
+
+	var fileWriter *os.File
+	var retentionName string
+	if retentionEnabled {
+		retentionName = downloadName
+		filePath := filepath.Join(databaseRetentionRoot, retentionName)
+		fileWriter, err = os.Create(filePath)
+		if err != nil {
+			retentionEnabled = false
+			log.Printf("database retention disabled: %v", err)
+		}
+	}
+
+	writer := io.Writer(w)
+	if retentionEnabled && fileWriter != nil {
+		writer = io.MultiWriter(responseWriter, fileWriter)
+	} else {
+		writer = responseWriter
+	}
+
+	var gzipWriter *gzip.Writer
+	if gzipEnabled {
+		gzipWriter = gzip.NewWriter(writer)
+		writer = gzipWriter
+	}
+
+	cmd := []string{"pg_dump", "-U", body.Username, "-d", database.Name, "-F", "c"}
+	env := []string{fmt.Sprintf("PGPASSWORD=%s", body.Password)}
+
+	execErr := h.docker.ExecCommandToWriter(r.Context(), database.ContainerID, cmd, env, writer)
+
+	if gzipWriter != nil {
+		_ = gzipWriter.Close()
+	}
+	if fileWriter != nil {
+		_ = fileWriter.Close()
+	}
+
+	if execErr != nil {
+		if responseWriter.BytesWritten() == 0 {
+			writeError(w, http.StatusInternalServerError, "failed to create database dump")
+			return
+		}
+		log.Printf("database download failed after response started: %v", execErr)
+		return
+	}
+
+	if retentionEnabled {
+		manifest := map[string]any{
+			"app_name":      "DockLite",
+			"database_name": database.Name,
+			"container_id":  database.ContainerID,
+			"format":        "custom",
+			"created_at":    time.Now().UTC().Format(time.RFC3339),
+			"filename":      retentionName,
+			"gzip":          gzipEnabled,
+		}
+		manifestPath := filepath.Join(databaseRetentionRoot, fmt.Sprintf("%s.json", baseName))
+		if data, err := json.MarshalIndent(manifest, "", "  "); err == nil {
+			if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
+				log.Printf("manifest write failed: %v", err)
+			}
+		}
+		pruneDatabaseDumps(database.Name)
+	}
+}
+
+func pruneDatabaseDumps(dbName string) {
+	entries, err := os.ReadDir(databaseRetentionRoot)
+	if err != nil {
+		log.Printf("prune database dumps failed: %v", err)
+		return
+	}
+
+	prefix := fmt.Sprintf("docklite-%s-", dbName)
+	type dumpFile struct {
+		path    string
+		modTime time.Time
+		base    string
+	}
+
+	var dumps []dumpFile
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if !strings.HasSuffix(name, ".dump") && !strings.HasSuffix(name, ".dump.gz") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		base := strings.TrimSuffix(name, ".gz")
+		base = strings.TrimSuffix(base, ".dump")
+		dumps = append(dumps, dumpFile{
+			path:    filepath.Join(databaseRetentionRoot, name),
+			modTime: info.ModTime(),
+			base:    base,
+		})
+	}
+
+	sort.Slice(dumps, func(i, j int) bool {
+		return dumps[i].modTime.After(dumps[j].modTime)
+	})
+
+	for i := databaseRetentionCount; i < len(dumps); i++ {
+		_ = os.Remove(dumps[i].path)
+		_ = os.Remove(filepath.Join(databaseRetentionRoot, fmt.Sprintf("%s.json", dumps[i].base)))
+	}
 }
 
 func normalizeSQL(sql string) string {

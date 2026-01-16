@@ -4,11 +4,24 @@ export const version = '006';
 export const name = 'drop_sessions_table';
 
 export function up(db: Database.Database): void {
+  const table = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'sessions'
+  `).get() as { name?: string } | undefined;
+
+  if (!table?.name) {
+    console.log('✓ Sessions table already absent');
+    return;
+  }
+
   // Verify sessions table is actually unused
-  const count = db.prepare(`SELECT COUNT(*) as count FROM sessions`).get() as {count: number};
+  const count = db.prepare(`SELECT COUNT(*) as count FROM sessions`).get() as { count: number };
 
   if (count.count > 0) {
-    console.warn(`⚠️  WARNING: Sessions table has ${count.count} records. Session storage uses iron-session cookies instead.`);
+    console.warn(
+      `⚠️  WARNING: Sessions table has ${count.count} records. Session storage uses iron-session cookies instead.`
+    );
   }
 
   db.exec(`DROP TABLE IF EXISTS sessions`);

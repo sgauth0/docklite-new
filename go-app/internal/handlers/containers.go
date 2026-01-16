@@ -777,10 +777,14 @@ func formatPortsFromInspect(ports nat.PortMap) string {
 func buildFolderTree(folders []store.Folder, containersByFolderID map[int64][]models.ContainerInfo) []*folderNode {
 	folderMap := make(map[int64]*folderNode, len(folders))
 	for _, folder := range folders {
+		containers := containersByFolderID[folder.ID]
+		if containers == nil {
+			containers = []models.ContainerInfo{}
+		}
 		node := &folderNode{
 			Folder:     folder,
 			Children:   []*folderNode{},
-			Containers: containersByFolderID[folder.ID],
+			Containers: containers,
 		}
 		folderMap[folder.ID] = node
 	}

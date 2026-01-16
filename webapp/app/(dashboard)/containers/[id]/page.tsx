@@ -229,13 +229,13 @@ export default function ContainerDetailPage() {
                       CPU Usage
                     </span>
                     <span className="text-2xl font-bold" style={{ color: 'var(--neon-yellow)' }}>
-                      {stats.cpu.toFixed(2)}%
+                      {(stats.cpu ?? 0).toFixed(2)}%
                     </span>
                   </div>
                   <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-300"
-                      style={{ width: `${Math.min(stats.cpu, 100)}%` }}
+                      style={{ width: `${Math.min(stats.cpu ?? 0, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -247,17 +247,17 @@ export default function ContainerDetailPage() {
                       Memory Usage
                     </span>
                     <span className="text-2xl font-bold" style={{ color: 'var(--neon-pink)' }}>
-                      {stats.memory.percentage.toFixed(2)}%
+                      {(stats.memory?.percentage ?? 0).toFixed(2)}%
                     </span>
                   </div>
                   <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden mb-2">
                     <div
                       className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300"
-                      style={{ width: `${Math.min(stats.memory.percentage, 100)}%` }}
+                      style={{ width: `${Math.min(stats.memory?.percentage ?? 0, 100)}%` }}
                     ></div>
                   </div>
                   <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-                    {formatBytes(stats.memory.used)} / {formatBytes(stats.memory.total)}
+                    {formatBytes(stats.memory?.used ?? 0)} / {formatBytes(stats.memory?.total ?? 0)}
                   </div>
                 </div>
               </div>

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Database as DatabaseType } from '@/types';
 import DbViewer from './DbViewer';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { Database, DotsThree, PencilSimpleLine, SignIn, Trash } from '@phosphor-icons/react';
+import { Database, DotsThree, PencilSimpleLine, SignIn, Trash, DownloadSimple } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 
 interface DatabaseWithSize extends DatabaseType {
@@ -41,9 +41,14 @@ export default function DatabasesPage() {
   const [editModeDb, setEditModeDb] = useState<DatabaseWithSize | null>(null);
   const [editModeUsername, setEditModeUsername] = useState('');
   const [editModePassword, setEditModePassword] = useState('');
+  const [downloadDb, setDownloadDb] = useState<DatabaseWithSize | null>(null);
+  const [downloadUsername, setDownloadUsername] = useState('');
+  const [downloadPassword, setDownloadPassword] = useState('');
+  const [downloadGzip, setDownloadGzip] = useState(true);
+  const [downloadingDb, setDownloadingDb] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const menuPopupRef = useRef<HTMLDivElement>(null);
-  const stopMenu = (event: React.PointerEvent) => event.stopPropagation();
+  const stopMenu = (event: React.MouseEvent | React.PointerEvent) => event.stopPropagation();
 
   const fetchDatabases = async () => {
     try {
@@ -64,17 +69,6 @@ export default function DatabasesPage() {
     fetchDatabases();
     const interval = setInterval(fetchDatabases, 30000); // Refresh every 30s
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target?.closest('[data-db-menu="true"]')) {
-        setMenuDbId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -200,6 +194,68 @@ export default function DatabasesPage() {
     sessionStorage.setItem(`docklite-db-edit-${editModeDb.id}`, JSON.stringify(payload));
     setEditModeDb(null);
     router.push(`/databases/${editModeDb.id}/edit`);
+  };
+
+  const openDownloadModal = (db: DatabaseWithSize) => {
+    setDownloadDb(db);
+    setDownloadUsername('docklite');
+    setDownloadPassword('');
+    setDownloadGzip(true);
+    setError('');
+  };
+
+  const handleDownload = async () => {
+    if (!downloadDb) return;
+    if (!downloadUsername || !downloadPassword) {
+      setError('Database username and password are required to download.');
+      return;
+    }
+
+    setDownloadingDb(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/databases/${downloadDb.id}/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: downloadUsername,
+          password: downloadPassword,
+          gzip: downloadGzip,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to download database');
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/i);
+      const fallbackName = downloadGzip
+        ? `docklite-${downloadDb.name}.dump.gz`
+        : `docklite-${downloadDb.name}.dump`;
+      const filename = match?.[1] || fallbackName;
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      setDownloadDb(null);
+      setDownloadUsername('');
+      setDownloadPassword('');
+      setDownloadGzip(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to download database');
+    } finally {
+      setDownloadingDb(false);
+    }
   };
 
   const formatBytes = (bytes: number) => {
@@ -430,6 +486,7 @@ export default function DatabasesPage() {
                         setMenuPosition(null);
                       }
                     }}
+                    onMouseDown={stopMenu}
                     className="p-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                     style={{
                       background: 'transparent',
@@ -449,15 +506,15 @@ export default function DatabasesPage() {
                     createPortal(
                       <div
                         className="fixed inset-0 z-[10000]"
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          if (e.target !== e.currentTarget) return;
                           setMenuDbId(null);
                           setMenuPosition(null);
                         }}
-                        onPointerDown={stopMenu}
-                        onPointerDownCapture={stopMenu}
                       >
                         <div
                           ref={menuPopupRef}
+                          data-db-menu="true"
                           className="absolute rounded-lg overflow-hidden animate-slide-down"
                           style={{
                             top: menuPosition.top,
@@ -469,19 +526,18 @@ export default function DatabasesPage() {
                             maxWidth: 'calc(100vw - 24px)',
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          onPointerDown={stopMenu}
-                          onPointerDownCapture={stopMenu}
+                          onMouseDown={stopMenu}
                         >
                           <button
                             type="button"
                             onClick={(e) => {
+                              console.log('Edit Credentials button clicked');
                               e.stopPropagation();
                               setMenuDbId(null);
                               setMenuPosition(null);
-                              openEditModal(db);
+                              setTimeout(() => openEditModal(db), 0);
                             }}
-                            onPointerDown={stopMenu}
-                            onPointerDownCapture={stopMenu}
+                            onMouseDown={stopMenu}
                             className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
                             style={{ color: 'var(--neon-cyan)' }}
                           >
@@ -491,13 +547,13 @@ export default function DatabasesPage() {
                           <button
                             type="button"
                             onClick={(e) => {
+                              console.log('Edit Database Mode button clicked');
                               e.stopPropagation();
                               setMenuDbId(null);
                               setMenuPosition(null);
-                              openEditModeModal(db);
+                              setTimeout(() => openEditModeModal(db), 0);
                             }}
-                            onPointerDown={stopMenu}
-                            onPointerDownCapture={stopMenu}
+                            onMouseDown={stopMenu}
                             className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
                             style={{ color: 'var(--neon-purple)' }}
                           >
@@ -507,18 +563,34 @@ export default function DatabasesPage() {
                           <button
                             type="button"
                             onClick={(e) => {
+                              console.log('Delete Database button clicked');
                               e.stopPropagation();
                               setMenuDbId(null);
                               setMenuPosition(null);
-                              openDeleteModal(db);
+                              setTimeout(() => openDeleteModal(db), 0);
                             }}
-                            onPointerDown={stopMenu}
-                            onPointerDownCapture={stopMenu}
+                            onMouseDown={stopMenu}
                             className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-red-500/20 flex items-center gap-3"
                             style={{ color: '#ff6b6b' }}
                           >
                             <Trash size={16} weight="duotone" />
                             Delete Database
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              console.log('Download Database button clicked');
+                              e.stopPropagation();
+                              setMenuDbId(null);
+                              setMenuPosition(null);
+                              setTimeout(() => openDownloadModal(db), 0);
+                            }}
+                            onMouseDown={stopMenu}
+                            className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
+                            style={{ color: 'var(--neon-green)' }}
+                          >
+                            <DownloadSimple size={16} weight="duotone" />
+                            Download Database
                           </button>
                         </div>
                       </div>,
@@ -555,7 +627,7 @@ export default function DatabasesPage() {
                       border: `1px solid ${db.size === 0 ? '#666' : 'var(--neon-green)'}`,
                     }}
                   >
-                    {db.size === 0 ? '○ EMPTY' : `● ${formatBytes(db.size)}`}
+                            {db.size === 0 ? '○ EMPTY' : `● ${formatBytes(db.size)}`} {getSizeEmojis(db.sizeCategory)}
                   </span>
                 </div>
 
@@ -835,6 +907,101 @@ export default function DatabasesPage() {
                   }}
                 >
                   ✓ Enter Edit Mode
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Download Database Modal */}
+      {downloadDb && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: 'var(--neon-green)' }}>
+            <div className="mb-6 text-center">
+              <div className="text-5xl mb-4">⬇️</div>
+              <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: 'var(--neon-green)' }}>
+                Download Database
+              </h2>
+              <p className="text-sm font-mono opacity-80" style={{ color: 'var(--text-secondary)' }}>
+                {downloadDb.name}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="download-username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
+                  👤 DATABASE USERNAME
+                </label>
+                <input
+                  id="download-username"
+                  type="text"
+                  value={downloadUsername}
+                  onChange={(e) => setDownloadUsername(e.target.value)}
+                  className="input-vapor w-full"
+                  placeholder="docklite"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="download-password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
+                  🔑 DATABASE PASSWORD
+                </label>
+                <input
+                  id="download-password"
+                  type="password"
+                  value={downloadPassword}
+                  onChange={(e) => setDownloadPassword(e.target.value)}
+                  className="input-vapor w-full"
+                  placeholder="Enter database password"
+                />
+              </div>
+
+              <label className="flex items-center gap-3 text-sm font-bold" style={{ color: 'var(--neon-green)' }}>
+                <input
+                  type="checkbox"
+                  checked={downloadGzip}
+                  onChange={(e) => setDownloadGzip(e.target.checked)}
+                  className="h-4 w-4 accent-green-400"
+                />
+                Gzip compress download
+              </label>
+
+              <div className="p-4 rounded-lg border" style={{ background: 'rgba(255, 165, 0, 0.1)', borderColor: 'rgba(255, 165, 0, 0.35)' }}>
+                <p className="text-xs font-mono" style={{ color: 'var(--neon-yellow)' }}>
+                  ⚠️ This backs up the database only. Files/uploads are separate.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDownloadDb(null);
+                    setDownloadUsername('');
+                    setDownloadPassword('');
+                    setDownloadGzip(true);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
+                  style={{
+                    background: 'rgba(100, 100, 100, 0.3)',
+                    border: '2px solid var(--text-secondary)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  ✕ Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloadingDb}
+                  className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%)',
+                    color: 'white',
+                  }}
+                >
+                  {downloadingDb ? '⟳ Preparing...' : '⬇ Download Dump'}
                 </button>
               </div>
             </div>

@@ -63,11 +63,18 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
   const fetchDetails = async () => {
     try {
       const res = await fetch(`/api/containers/${containerId}/inspect`);
-      if (!res.ok) throw new Error('Failed to fetch container details');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to fetch container details');
+      }
       const data = await res.json();
+      if (!data.container) {
+        throw new Error('Invalid response from server');
+      }
       setDetails(data.container);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error fetching container details:', err);
+      setError(err.message || 'Failed to load container details');
     }
   };
 
@@ -77,10 +84,27 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
       const res = await fetch(`/api/containers/${containerId}/stats`);
       if (res.ok) {
         const data = await res.json();
-        setStats(data.stats);
+        // Handle both formats: agent-client transformed and raw agent response
+        const rawStats = data.stats;
+        if (rawStats && typeof rawStats === 'object') {
+          // Transform to consistent format
+          const cpu = Number(rawStats.cpu ?? rawStats.cpuUsage ?? rawStats.CPUUsage ?? 0);
+          const memUsed = Number(rawStats.memory?.used ?? rawStats.memoryUsage ?? rawStats.MemoryUsage ?? 0);
+          const memTotal = Number(rawStats.memory?.total ?? rawStats.memoryLimit ?? rawStats.MemoryLimit ?? 0);
+          const memPct = Number(rawStats.memory?.percentage ?? rawStats.memoryPct ?? rawStats.MemoryPct ?? 0);
+          
+          setStats({
+            cpu: cpu,
+            memory: {
+              used: memUsed,
+              total: memTotal,
+              percentage: memPct,
+            },
+          });
+        } else {
+          setStats(null);
+        }
       } else {
-        const errorData = await res.json();
-        console.warn('Stats fetch failed:', errorData.error);
         setStats(null);
       }
     } catch (err) {
@@ -110,12 +134,14 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
       setLoading(false);
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId]);
 
   // Auto-refresh stats (every 2 seconds)
   useEffect(() => {
     const interval = setInterval(fetchStats, 2000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId]);
 
   // Auto-refresh logs (every 5 seconds if enabled)
@@ -123,6 +149,7 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
     if (!autoRefreshLogs) return;
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId, autoRefreshLogs, logLines]);
 
   const formatBytes = (bytes: number) => {
@@ -240,7 +267,7 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
           {activeTab === 'overview' && (
             <>
               {/* Real-time Stats */}
-              {isRunning && stats && (
+              {isRunning && stats && stats.cpu !== undefined && (
                 <div className="card-vapor p-6 rounded-xl">
                   <h3 className="text-xl font-bold neon-text mb-4" style={{ color: 'var(--neon-pink)' }}>
                     📊 Real-time Resources
@@ -253,7 +280,7 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
                           CPU Usage
                         </span>
                         <span className="text-2xl font-bold" style={{ color: 'var(--neon-yellow)' }}>
-                          {stats.cpu.toFixed(2)}%
+                          {(stats.cpu).toFixed(2)}%
                         </span>
                       </div>
                       <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden">
@@ -271,17 +298,17 @@ export default function ContainerDetailsModal({ containerId, containerName, onCl
                           Memory Usage
                         </span>
                         <span className="text-2xl font-bold" style={{ color: 'var(--neon-pink)' }}>
-                          {stats.memory.percentage.toFixed(2)}%
+                          {(stats.memory?.percentage ?? 0).toFixed(2)}%
                         </span>
                       </div>
                       <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden mb-2">
                         <div
                           className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300"
-                          style={{ width: `${Math.min(stats.memory.percentage, 100)}%` }}
+                          style={{ width: `${Math.min(stats.memory?.percentage ?? 0, 100)}%` }}
                         ></div>
                       </div>
                       <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-                        {formatBytes(stats.memory.used)} / {formatBytes(stats.memory.total)}
+                        {formatBytes(stats.memory?.used ?? 0)} / {formatBytes(stats.memory?.total ?? 0)}
                       </div>
                     </div>
                   </div>
