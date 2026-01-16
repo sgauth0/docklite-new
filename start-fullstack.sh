@@ -117,6 +117,7 @@ DATABASE_PATH="$DATABASE_PATH" \
 DOCKER_SOCKET_PATH="unix:///var/run/docker.sock" \
 NEXTJS_URL="http://127.0.0.1:$GUI_PORT" \
 DOCKLITE_TOKEN="$DOCKLITE_TOKEN" \
+ENABLE_DB_DEBUG="true" \
 ./bin/docklite-agent > ./logs/agent.log 2>&1 &
 AGENT_PID=$!
 

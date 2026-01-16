@@ -126,6 +126,23 @@ func (s *SQLiteStore) ListDatabasesByUser(userID int64) ([]DatabaseRecord, error
 	return records, rows.Err()
 }
 
+func (s *SQLiteStore) HasDatabaseAccess(userID int64, databaseID int64) (bool, error) {
+	row := s.DB.QueryRow(`
+    SELECT 1
+    FROM database_permissions
+    WHERE user_id = ? AND database_id = ?
+    LIMIT 1
+  `, userID, databaseID)
+	var exists int
+	if err := row.Scan(&exists); err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *SQLiteStore) DeleteDatabase(id int64) error {
 	_, err := s.DB.Exec(`DELETE FROM databases WHERE id = ?`, id)
 	return err

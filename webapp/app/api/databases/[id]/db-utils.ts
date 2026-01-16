@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { getDatabaseById } from '@/lib/db';
+import { getDatabaseById, hasAccess } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 
 interface RunPsqlParams {
@@ -20,6 +20,20 @@ export async function requireAdminDatabase(id: number) {
   const database = getDatabaseById(id);
   if (!database) {
     throw new Error('NotFound');
+  }
+
+  return database;
+}
+
+export async function requireDatabaseAccess(id: number) {
+  const user = await requireAuth();
+  const database = getDatabaseById(id);
+  if (!database) {
+    throw new Error('NotFound');
+  }
+
+  if (!hasAccess(user.userId, id, user.isAdmin)) {
+    throw new Error('Forbidden');
   }
 
   return database;
