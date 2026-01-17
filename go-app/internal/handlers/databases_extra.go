@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,7 +54,7 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	if dockerDatabases, err := h.docker.ListDatabases(ctx); err == nil {
@@ -102,7 +101,9 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 
 		if database.ContainerID != "" {
 			query := fmt.Sprintf("SELECT pg_database_size('%s')", database.Name)
-			output, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, "docklite", database.Name, "", query, false)
+			dockerCtx, dockerCancel := dockerContext(r.Context())
+			output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "docklite", database.Name, "", query, false)
+			dockerCancel()
 			if err == nil {
 				if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(output), 10, 64); parseErr == nil {
 					size = parsed
@@ -224,10 +225,13 @@ func (h *Handlers) deleteDatabase(w http.ResponseWriter, r *http.Request, databa
 	}
 
 	if database.ContainerID != "" {
-		if err := h.docker.RemoveContainer(r.Context(), database.ContainerID); err != nil {
+		dockerCtx, dockerCancel := dockerContext(r.Context())
+		if err := h.docker.RemoveContainer(dockerCtx, database.ContainerID); err != nil {
+			dockerCancel()
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		dockerCancel()
 	}
 
 	if err := h.store.DeleteDatabase(databaseID); err != nil {
@@ -265,15 +269,18 @@ func (h *Handlers) updateDatabaseCredentials(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
 	alterSQL := fmt.Sprintf("ALTER USER %s WITH PASSWORD '%s';", body.Username, body.Password)
-	if _, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, "postgres", "postgres", "", alterSQL, false); err != nil {
+	if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", alterSQL, false); err != nil {
 		createSQL := fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s';", body.Username, body.Password)
-		if _, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, "postgres", "postgres", "", createSQL, false); err != nil {
+		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", createSQL, false); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to update credentials")
 			return
 		}
 		grantSQL := fmt.Sprintf("GRANT ALL PRIVILEGES ON DATABASE %s TO %s;", database.Name, body.Username)
-		if _, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, "postgres", "postgres", "", grantSQL, false); err != nil {
+		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", grantSQL, false); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to grant privileges")
 			return
 		}
@@ -318,12 +325,15 @@ func (h *Handlers) DatabaseQuery(w http.ResponseWriter, r *http.Request, databas
 		return
 	}
 
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
 	normalized := normalizeSQL(body.SQL)
 	isSelectable := strings.HasPrefix(strings.ToLower(normalized), "select") || strings.HasPrefix(strings.ToLower(normalized), "with")
 
 	if isSelectable {
 		wrapped := fmt.Sprintf("SELECT coalesce(json_agg(t), '[]'::json) FROM (%s) t;", normalized)
-		rowsJSON, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, wrapped, true)
+		rowsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, wrapped, true)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to execute query")
 			return
@@ -345,7 +355,7 @@ func (h *Handlers) DatabaseQuery(w http.ResponseWriter, r *http.Request, databas
 		return
 	}
 
-	output, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, normalized, false)
+	output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, normalized, false)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to execute query")
 		return
@@ -409,12 +419,15 @@ func (h *Handlers) DatabaseSchema(w http.ResponseWriter, r *http.Request, databa
     ) t;
   `
 
-	tablesJSON, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, tablesSQL, true)
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
+	tablesJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, tablesSQL, true)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to fetch schema")
 		return
 	}
-	columnsJSON, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
+	columnsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to fetch schema")
 		return
@@ -519,12 +532,15 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
     ) t;
   `, body.Table)
 
-	columnsJSON, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
+	columnsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to fetch table data")
 		return
 	}
-	rowsJSON, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, rowsSQL, true)
+	rowsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, rowsSQL, true)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to fetch table data")
 		return
@@ -617,7 +633,10 @@ func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, data
 		return
 	}
 
-	if _, err := h.docker.ExecPostgres(r.Context(), database.ContainerID, body.Username, database.Name, body.Password, "SELECT 1", false); err != nil {
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
+	if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, "SELECT 1", false); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid database credentials")
 		return
 	}
@@ -671,7 +690,7 @@ func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, data
 	cmd := []string{"pg_dump", "-U", body.Username, "-d", database.Name, "-F", "c"}
 	env := []string{fmt.Sprintf("PGPASSWORD=%s", body.Password)}
 
-	execErr := h.docker.ExecCommandToWriter(r.Context(), database.ContainerID, cmd, env, writer)
+	execErr := h.docker.ExecCommandToWriter(dockerCtx, database.ContainerID, cmd, env, writer)
 
 	if gzipWriter != nil {
 		_ = gzipWriter.Close()

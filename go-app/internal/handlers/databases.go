@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 )
 
 type createDatabaseRequest struct {
@@ -27,7 +25,7 @@ func (h *Handlers) Databases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) listDatabases(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	databases, err := h.docker.ListDatabases(ctx)
@@ -66,7 +64,7 @@ func (h *Handlers) createDatabase(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	id, assignedPort, username, password, err := h.docker.CreateDatabaseContainer(ctx, sanitized, req.Username, req.Password, port)
 	if err != nil {

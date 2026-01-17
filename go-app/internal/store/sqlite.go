@@ -25,6 +25,16 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if path != ":memory:" {
+		if _, err := db.Exec("PRAGMA journal_mode = WAL"); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
+	}
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	return &SQLiteStore{DB: db, Path: path}, nil
 }
 
