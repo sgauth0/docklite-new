@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import FileManager from './FileManager';
 import SchemaBrowser from '../databases/SchemaBrowser';
+import { ChartLine, Scroll, Database, MagnifyingGlass, CaretLeft, CaretRight, Play } from '@phosphor-icons/react';
 
 type SidebarContent = 'stats' | 'logs' | 'database' | 'search' | 'none';
 
@@ -28,12 +29,12 @@ export default function SidebarPanel({
   const [selectedContent, setSelectedContent] = useState<SidebarContent>(defaultContent);
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const contentOptions: Array<{ value: SidebarContent; label: string; icon: string }> = [
-    { value: 'none', label: 'None', icon: '—' },
-    { value: 'stats', label: 'Live Stats', icon: '📊' },
-    { value: 'logs', label: 'Container Logs', icon: '📜' },
-    { value: 'database', label: 'Database Query', icon: '💾' },
-    { value: 'search', label: 'Search', icon: '🔍' },
+  const contentOptions: Array<{ value: SidebarContent; label: string }> = [
+    { value: 'none', label: 'None' },
+    { value: 'stats', label: 'Live Stats' },
+    { value: 'logs', label: 'Container Logs' },
+    { value: 'database', label: 'Database Query' },
+    { value: 'search', label: 'Search' },
   ];
 
   // Toggle button when sidebar is closed
@@ -56,7 +57,10 @@ export default function SidebarPanel({
         }}
         title={`Open ${side} sidebar`}
       >
-        {side === 'left' ? '▶' : '◀'} {isDbEditMode ? 'Schema' : isFileBrowser ? 'Files' : 'Sidebar'}
+        <span className="inline-flex items-center gap-2">
+          {side === 'left' ? <CaretRight size={14} weight="bold" /> : <CaretLeft size={14} weight="bold" />}
+          {isDbEditMode ? 'Schema' : isFileBrowser ? 'Files' : 'Sidebar'}
+        </span>
       </button>
     );
   }
@@ -80,7 +84,7 @@ export default function SidebarPanel({
             >
               {contentOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -117,7 +121,7 @@ export default function SidebarPanel({
         }}
         title="Close sidebar"
       >
-        {side === 'left' ? '◀' : '▶'}
+        {side === 'left' ? <CaretLeft size={14} weight="bold" /> : <CaretRight size={14} weight="bold" />}
       </button>
     </div>
   );
@@ -127,7 +131,10 @@ export default function SidebarPanel({
 function StatsContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold">📊 Live Stats</div>
+      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
+        <ChartLine size={16} weight="duotone" />
+        Live Stats
+      </div>
       <p className="text-xs opacity-70 mb-4">System metrics</p>
       <div className="space-y-4">
         <div className="card-vapor p-3 rounded-lg">
@@ -150,7 +157,10 @@ function StatsContent() {
 function LogsContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold">📜 Container Logs</div>
+      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
+        <Scroll size={16} weight="duotone" />
+        Container Logs
+      </div>
       <div className="bg-black/50 p-3 rounded-lg text-xs space-y-1 font-mono" style={{ color: 'var(--neon-green)' }}>
         <div>[2025-12-30 04:00:00] Container started</div>
         <div>[2025-12-30 04:00:01] Listening on port 80</div>
@@ -164,7 +174,10 @@ function LogsContent() {
 function DatabaseContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold">💾 Database Query</div>
+      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
+        <Database size={16} weight="duotone" />
+        Database Query
+      </div>
       <textarea
         className="w-full h-32 p-2 rounded-lg text-xs font-mono mb-2"
         style={{
@@ -177,7 +190,10 @@ function DatabaseContent() {
       <button
         className="btn-neon w-full py-2 text-sm font-bold"
       >
-        ▶ Execute Query
+        <span className="inline-flex items-center gap-2">
+          <Play size={14} weight="duotone" />
+          Execute Query
+        </span>
       </button>
     </div>
   );
@@ -186,7 +202,10 @@ function DatabaseContent() {
 function SearchContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold">🔍 Search</div>
+      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
+        <MagnifyingGlass size={16} weight="duotone" />
+        Search
+      </div>
       <input
         type="text"
         className="input-vapor w-full px-3 py-2 text-sm mb-4"

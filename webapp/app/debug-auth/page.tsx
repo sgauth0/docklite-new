@@ -12,7 +12,7 @@ export default async function DebugAuthPage() {
   }
   return (
     <div style={{ padding: '50px', fontFamily: 'monospace', background: '#000', color: '#0ff' }}>
-      <h1>🔍 AUTH DEBUG</h1>
+      <h1>AUTH DEBUG</h1>
       <p>User: {user ? JSON.stringify(user) : 'null'}</p>
       <p>Status: {user ? 'AUTHENTICATED' : 'NOT AUTHENTICATED'}</p>
     </div>

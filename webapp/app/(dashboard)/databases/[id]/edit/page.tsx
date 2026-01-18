@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import {
+  Sparkle,
+  CheckCircle,
+  ChartBar,
+  Lightning,
+  ArrowLeft,
+  SpinnerGap,
+  Play,
+} from '@phosphor-icons/react';
 
 interface ColumnInfo {
   name: string;
@@ -148,9 +157,10 @@ export default function DatabaseEditPage() {
         <button
           type="button"
           onClick={() => router.push('/databases')}
-          className="btn-neon px-5 py-2 text-sm font-bold"
+          className="btn-neon px-5 py-2 text-sm font-bold inline-flex items-center gap-2"
         >
-          ← Back to Databases
+          <ArrowLeft size={14} weight="bold" />
+          Back to Databases
         </button>
       </div>
     );
@@ -161,8 +171,9 @@ export default function DatabaseEditPage() {
       <div className="card-vapor p-6 rounded-xl border border-purple-500/30">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-              ✨ Database Edit Mode
+            <h1 className="text-3xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <Sparkle size={20} weight="duotone" />
+              Database Edit Mode
             </h1>
             <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
               {dbInfo ? `${dbInfo.name} • localhost:${dbInfo.postgres_port}` : 'Loading database info...'}
@@ -176,7 +187,8 @@ export default function DatabaseEditPage() {
                   color: 'var(--neon-cyan)',
                 }}
               >
-                ✅ Connected as <span className="font-bold">{auth.username}</span>
+                <CheckCircle size={14} weight="duotone" />
+                Connected as <span className="font-bold">{auth.username}</span>
               </div>
             )}
           </div>
@@ -189,7 +201,10 @@ export default function DatabaseEditPage() {
               color: 'white',
             }}
           >
-            ← Exit Edit Mode
+            <span className="inline-flex items-center gap-2">
+              <ArrowLeft size={14} weight="bold" />
+              Exit Edit Mode
+            </span>
           </button>
         </div>
       </div>
@@ -208,7 +223,10 @@ export default function DatabaseEditPage() {
               border: activeTab === 'table' ? '2px solid var(--neon-pink)' : '2px solid transparent',
             }}
           >
-            📊 Table View
+            <span className="inline-flex items-center gap-2">
+              <ChartBar size={14} weight="duotone" />
+              Table View
+            </span>
           </button>
           <button
             type="button"
@@ -222,19 +240,24 @@ export default function DatabaseEditPage() {
               border: activeTab === 'sql' ? '2px solid var(--neon-cyan)' : '2px solid transparent',
             }}
           >
-            ⚡ Run SQL
+            <span className="inline-flex items-center gap-2">
+              <Lightning size={14} weight="duotone" />
+              Run SQL
+            </span>
           </button>
         </div>
       </div>
 
       {activeTab === 'table' && (
         <div className="card-vapor p-6 rounded-xl border border-purple-500/20">
-          <h2 className="text-xl font-bold neon-text mb-4" style={{ color: 'var(--neon-pink)' }}>
-            📊 Table View {selectedTable ? `• ${selectedTable}` : ''}
+          <h2 className="text-xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+            <ChartBar size={16} weight="duotone" />
+            Table View {selectedTable ? `• ${selectedTable}` : ''}
           </h2>
           {loadingTable && (
-            <div className="text-sm font-mono" style={{ color: 'var(--neon-cyan)' }}>
-              ⟳ Loading table...
+            <div className="text-sm font-mono flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+              Loading table...
             </div>
           )}
           {tableError && (
@@ -312,8 +335,9 @@ export default function DatabaseEditPage() {
 
       {activeTab === 'sql' && (
         <div className="card-vapor p-6 rounded-xl border border-purple-500/20">
-          <h2 className="text-xl font-bold neon-text mb-4" style={{ color: 'var(--neon-green)' }}>
-            ⚡ Run SQL
+          <h2 className="text-xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+            <Lightning size={16} weight="duotone" />
+            Run SQL
           </h2>
           <textarea
             className="w-full h-40 p-3 rounded-lg text-xs font-mono mb-3"
@@ -331,7 +355,17 @@ export default function DatabaseEditPage() {
             onClick={handleRunQuery}
             className="btn-neon w-full py-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {runningQuery ? '⟳ Running...' : '▶ Execute SQL'}
+            {runningQuery ? (
+              <span className="inline-flex items-center gap-2">
+                <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                Running...
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Play size={14} weight="duotone" />
+                Execute SQL
+              </span>
+            )}
           </button>
 
           {queryError && (

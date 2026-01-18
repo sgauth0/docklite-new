@@ -5,7 +5,31 @@ import { createPortal } from 'react-dom';
 import { Database as DatabaseType } from '@/types';
 import DbViewer from './DbViewer';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { Database, DotsThree, PencilSimpleLine, SignIn, Trash, DownloadSimple } from '@phosphor-icons/react';
+import {
+  Database,
+  DotsThree,
+  PencilSimpleLine,
+  SignIn,
+  Trash,
+  DownloadSimple,
+  Package,
+  SpinnerGap,
+  Sparkle,
+  X,
+  XCircle,
+  Globe,
+  Plug,
+  UserCircle,
+  Key,
+  WarningCircle,
+  ThumbsUp,
+  Info,
+  LinkSimple,
+  Brain,
+  ArrowDown,
+  CalendarBlank,
+  Lightbulb,
+} from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 
 interface DatabaseWithSize extends DatabaseType {
@@ -266,27 +290,29 @@ export default function DatabasesPage() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getSizeEmojis = (category: string) => {
-    const emojiMap = {
-      empty: '',
-      tiny: '💾',
-      small: '💾💾',
-      medium: '💾💾💾',
-      large: '💾💾💾💾',
-      huge: '💾💾💾💾💾',
+  const getSizeLabel = (category: string) => {
+    const labelMap = {
+      empty: 'Empty',
+      tiny: 'Tiny',
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large',
+      huge: 'Huge',
     };
-    return emojiMap[category as keyof typeof emojiMap] || '';
+    return labelMap[category as keyof typeof labelMap] || '';
   };
 
   if (loading) {
     return (
       <div className="max-w-[1400px] mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-purple)' }}>
-            💾 Databases
+          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+            <Database size={24} weight="duotone" />
+            Databases
           </h1>
-          <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▶ LOADING... ◀
+          <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+            <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+            Loading...
           </p>
         </div>
         <SkeletonLoader type="database" count={4} />
@@ -300,58 +326,87 @@ export default function DatabasesPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-purple)' }}>
-            💾 Databases
+          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+            <Database size={24} weight="duotone" />
+            Databases
           </h1>
           <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▶ DATABASE MANAGEMENT SYSTEM ◀
+            Database management system
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="btn-neon inline-flex items-center gap-2"
         >
-          {showCreateForm ? '✕ Cancel' : '✨ Create Database'}
+          {showCreateForm ? (
+            <span className="inline-flex items-center gap-2">
+              <X size={14} weight="bold" />
+              Cancel
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <Sparkle size={14} weight="duotone" />
+              Create Database
+            </span>
+          )}
         </button>
       </div>
 
       {error && (
         <div className="mt-4 card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(255, 107, 107, 0.5)' }}>
-          <p className="font-bold" style={{ color: '#ff6b6b' }}>
-            ❌ {error}
+          <p className="font-bold flex items-center gap-2" style={{ color: '#ff6b6b' }}>
+            <XCircle size={16} weight="duotone" />
+            {error}
           </p>
         </div>
       )}
 
       {connectionInfo && (
         <div className="mt-4 card-vapor p-6 rounded-lg border-2" style={{ borderColor: 'rgba(57, 255, 20, 0.5)' }}>
-          <h3 className="text-lg font-bold mb-3 neon-text" style={{ color: 'var(--neon-green)' }}>
-            ✓ Database Created Successfully!
+          <h3 className="text-lg font-bold mb-3 neon-text flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+            <Sparkle size={16} weight="duotone" />
+            Database Created Successfully!
           </h3>
           <div className="space-y-2 font-mono text-sm" style={{ color: 'var(--text-primary)' }}>
             <div className="flex justify-between">
-              <span style={{ color: 'var(--neon-cyan)' }}>🌐 HOST:</span>
+              <span className="inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Globe size={14} weight="duotone" />
+                HOST:
+              </span>
               <span>{connectionInfo.host}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: 'var(--neon-cyan)' }}>🔌 PORT:</span>
+              <span className="inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Plug size={14} weight="duotone" />
+                PORT:
+              </span>
               <span>{connectionInfo.port}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: 'var(--neon-cyan)' }}>💾 DATABASE:</span>
+              <span className="inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Database size={14} weight="duotone" />
+                DATABASE:
+              </span>
               <span>{connectionInfo.database}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: 'var(--neon-cyan)' }}>👤 USERNAME:</span>
+              <span className="inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <UserCircle size={14} weight="duotone" />
+                USERNAME:
+              </span>
               <span>{connectionInfo.username}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: 'var(--neon-cyan)' }}>🔑 PASSWORD:</span>
+              <span className="inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Key size={14} weight="duotone" />
+                PASSWORD:
+              </span>
               <span className="font-bold" style={{ color: 'var(--neon-pink)' }}>{connectionInfo.password}</span>
             </div>
           </div>
-          <p className="mt-4 text-xs font-mono" style={{ color: 'var(--neon-yellow)' }}>
-            ⚠️ Save these credentials - the password will not be shown again!
+          <p className="mt-4 text-xs font-mono flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
+            <WarningCircle size={14} weight="duotone" />
+            Save these credentials - the password will not be shown again!
           </p>
           <button
             onClick={() => setConnectionInfo(null)}
@@ -361,7 +416,10 @@ export default function DatabasesPage() {
               color: 'var(--bg-darker)',
             }}
           >
-            👍 Got it!
+            <span className="inline-flex items-center gap-2">
+              <ThumbsUp size={14} weight="duotone" />
+              Got it!
+            </span>
           </button>
         </div>
       )}
@@ -370,8 +428,9 @@ export default function DatabasesPage() {
         <div className="mt-6 card-vapor p-6 rounded-xl">
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-cyan)' }}>
-                💾 DATABASE NAME
+              <label htmlFor="name" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Database size={16} weight="duotone" />
+                DATABASE NAME
               </label>
               <input
                 type="text"
@@ -383,13 +442,14 @@ export default function DatabasesPage() {
                 placeholder="my_awesome_database"
               />
               <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                ▸ Only alphanumeric characters and underscores ◂
+                Only alphanumeric characters and underscores
               </p>
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
-                👤 USERNAME
+              <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <UserCircle size={16} weight="duotone" />
+                USERNAME
               </label>
               <input
                 type="text"
@@ -401,13 +461,14 @@ export default function DatabasesPage() {
                 placeholder="docklite"
               />
               <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                ▸ Default: docklite ◂
+                Default: docklite
               </p>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                🔑 PASSWORD
+              <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                <Key size={16} weight="duotone" />
+                PASSWORD
               </label>
               <input
                 type="password"
@@ -418,7 +479,7 @@ export default function DatabasesPage() {
                 placeholder="Leave empty for auto-generated password"
               />
               <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                ▸ Leave empty to auto-generate a secure password ◂
+                Leave empty to auto-generate a secure password
               </p>
             </div>
 
@@ -427,7 +488,17 @@ export default function DatabasesPage() {
               disabled={creating}
               className="btn-neon w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {creating ? '⟳ Creating...' : '✨ Create PostgreSQL Database'}
+              {creating ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerGap size={16} weight="duotone" className="animate-spin" />
+                  Creating...
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <Sparkle size={16} weight="duotone" />
+                  Create PostgreSQL Database
+                </span>
+              )}
             </button>
           </form>
         </div>
@@ -435,17 +506,20 @@ export default function DatabasesPage() {
 
       {/* PostgreSQL Databases */}
       <div className="mt-8">
-        <h2 className="text-2xl font-bold neon-text mb-4" style={{ color: 'var(--neon-pink)' }}>
-          🐘 PostgreSQL Databases
+        <h2 className="text-2xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+          <Database size={20} weight="duotone" />
+          PostgreSQL Databases
         </h2>
 
         {databases.length === 0 ? (
           <div className="text-center py-12 card-vapor">
-            <p className="text-lg font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-              📭 No PostgreSQL databases yet!
+            <p className="text-lg font-bold mb-2 flex items-center justify-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+              <Package size={20} weight="duotone" />
+              No PostgreSQL databases yet!
             </p>
-            <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-              Create your first database to get started ✨
+            <p className="text-sm font-mono flex items-center justify-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+              <Sparkle size={14} weight="duotone" />
+              Create your first database to get started
             </p>
           </div>
         ) : (
@@ -607,6 +681,7 @@ export default function DatabasesPage() {
                     <Database
                       size={46}
                       weight="duotone"
+                      className="animate-wobble"
                       style={{
                         color: 'var(--neon-cyan)',
                         filter: 'drop-shadow(0 0 8px rgba(79, 214, 255, 0.7)) drop-shadow(0 0 14px rgba(79, 214, 255, 0.45))',
@@ -627,26 +702,35 @@ export default function DatabasesPage() {
                       border: `1px solid ${db.size === 0 ? '#666' : 'var(--neon-green)'}`,
                     }}
                   >
-                            {db.size === 0 ? '○ EMPTY' : `● ${formatBytes(db.size)}`} {getSizeEmojis(db.sizeCategory)}
+                            {db.size === 0 ? '○ EMPTY' : `● ${formatBytes(db.size)}`} {getSizeLabel(db.sizeCategory)}
                   </span>
                 </div>
 
                 {/* Info */}
                 <div className="space-y-2 text-sm font-mono">
                   <div className="flex items-center gap-2">
-                    <span className="opacity-60" style={{ color: 'var(--text-secondary)' }}>🔌 Port:</span>
+                    <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                      <Plug size={12} weight="duotone" />
+                      Port:
+                    </span>
                     <span className="font-bold" style={{ color: 'var(--neon-purple)' }}>
                       {db.postgres_port}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="opacity-60" style={{ color: 'var(--text-secondary)' }}>🆔 ID:</span>
+                    <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                      <Info size={12} weight="duotone" />
+                      ID:
+                    </span>
                     <span className="opacity-70 text-xs">
                       {db.container_id.substring(0, 12)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="opacity-60" style={{ color: 'var(--text-secondary)' }}>📅 Created:</span>
+                    <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                      <CalendarBlank size={12} weight="duotone" />
+                      Created:
+                    </span>
                     <span className="opacity-70 text-xs">
                       {new Date(db.created_at).toLocaleDateString()}
                     </span>
@@ -670,10 +754,11 @@ export default function DatabasesPage() {
 
       <div className="mt-8 card-vapor p-6 rounded-xl border-2" style={{ borderColor: 'rgba(0, 255, 255, 0.3)' }}>
         <div className="flex items-start gap-3">
-          <span className="text-2xl">💡</span>
+          <Lightbulb size={22} weight="duotone" />
           <div>
-            <p className="text-sm font-bold mb-2" style={{ color: 'var(--neon-cyan)' }}>
-              🔗 CONNECTION INFO
+            <p className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <LinkSimple size={14} weight="duotone" />
+              CONNECTION INFO
             </p>
             <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
               Connect to your PostgreSQL databases using <span className="font-bold" style={{ color: 'var(--neon-pink)' }}>localhost</span> as the host and the port shown on each card.
@@ -688,8 +773,9 @@ export default function DatabasesPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="card-vapor max-w-lg w-full p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-                ✏️ Edit Database Credentials
+              <h2 className="text-2xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <PencilSimpleLine size={18} weight="duotone" />
+                Edit Database Credentials
               </h2>
               <p className="text-sm font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
                 {editingDb.name}
@@ -698,8 +784,9 @@ export default function DatabasesPage() {
 
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label htmlFor="edit-username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
-                  👤 NEW USERNAME
+                <label htmlFor="edit-username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                  <UserCircle size={16} weight="duotone" />
+                  NEW USERNAME
                 </label>
                 <input
                   type="text"
@@ -713,8 +800,9 @@ export default function DatabasesPage() {
               </div>
 
               <div>
-                <label htmlFor="edit-password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  🔑 NEW PASSWORD
+                <label htmlFor="edit-password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                  <Key size={16} weight="duotone" />
+                  NEW PASSWORD
                 </label>
                 <input
                   type="password"
@@ -728,8 +816,9 @@ export default function DatabasesPage() {
               </div>
 
               <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 165, 0, 0.1)', border: '1px solid rgba(255, 165, 0, 0.3)' }}>
-                <p className="text-xs font-mono" style={{ color: 'var(--neon-yellow)' }}>
-                  ⚠️ This will update the PostgreSQL user credentials in the database container.
+                <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
+                  <WarningCircle size={14} weight="duotone" />
+                  This will update the PostgreSQL user credentials in the database container.
                   Make sure to update your application connection strings!
                 </p>
               </div>
@@ -749,7 +838,10 @@ export default function DatabasesPage() {
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  ✕ Cancel
+                  <span className="inline-flex items-center gap-2">
+                    <X size={14} weight="bold" />
+                    Cancel
+                  </span>
                 </button>
                 <button
                   type="submit"
@@ -760,7 +852,17 @@ export default function DatabasesPage() {
                     color: 'white',
                   }}
                 >
-                  {creating ? '⟳ Updating...' : '✓ Update Credentials'}
+                  {creating ? (
+                    <span className="inline-flex items-center gap-2">
+                      <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                      Updating...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <Sparkle size={14} weight="duotone" />
+                      Update Credentials
+                    </span>
+                  )}
                 </button>
               </div>
             </form>
@@ -773,7 +875,9 @@ export default function DatabasesPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: '#ff6b6b' }}>
             <div className="mb-6 text-center">
-              <div className="text-5xl mb-4">⚠️</div>
+              <div className="flex justify-center mb-4">
+                <WarningCircle size={36} weight="duotone" color="#ff6b6b" />
+              </div>
               <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: '#ff6b6b' }}>
                 Delete Database
               </h2>
@@ -817,7 +921,10 @@ export default function DatabasesPage() {
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  ✕ Cancel
+                  <span className="inline-flex items-center gap-2">
+                    <X size={14} weight="bold" />
+                    Cancel
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -829,7 +936,14 @@ export default function DatabasesPage() {
                     color: 'white',
                   }}
                 >
-                  {deletingDb ? '⟳ Deleting...' : 'Delete Database'}
+                  {deletingDb ? (
+                    <span className="inline-flex items-center gap-2">
+                      <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Delete Database'
+                  )}
                 </button>
               </div>
             </div>
@@ -842,7 +956,9 @@ export default function DatabasesPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: 'var(--neon-purple)' }}>
             <div className="mb-6 text-center">
-              <div className="text-5xl mb-4">🧠</div>
+              <div className="flex justify-center mb-4">
+                <Brain size={36} weight="duotone" color="var(--neon-cyan)" />
+              </div>
               <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
                 DO YOU WANT TO EDIT MODE?
               </h2>
@@ -853,8 +969,9 @@ export default function DatabasesPage() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="edit-mode-username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
-                  👤 DATABASE USERNAME
+                <label htmlFor="edit-mode-username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                  <UserCircle size={16} weight="duotone" />
+                  DATABASE USERNAME
                 </label>
                 <input
                   id="edit-mode-username"
@@ -867,8 +984,9 @@ export default function DatabasesPage() {
               </div>
 
               <div>
-                <label htmlFor="edit-mode-password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  🔑 DATABASE PASSWORD
+                <label htmlFor="edit-mode-password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                  <Key size={16} weight="duotone" />
+                  DATABASE PASSWORD
                 </label>
                 <input
                   id="edit-mode-password"
@@ -895,7 +1013,10 @@ export default function DatabasesPage() {
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  ✕ Cancel
+                  <span className="inline-flex items-center gap-2">
+                    <X size={14} weight="bold" />
+                    Cancel
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -906,7 +1027,10 @@ export default function DatabasesPage() {
                     color: 'white',
                   }}
                 >
-                  ✓ Enter Edit Mode
+                  <span className="inline-flex items-center gap-2">
+                    <Sparkle size={14} weight="duotone" />
+                    Enter Edit Mode
+                  </span>
                 </button>
               </div>
             </div>
@@ -919,7 +1043,9 @@ export default function DatabasesPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: 'var(--neon-green)' }}>
             <div className="mb-6 text-center">
-              <div className="text-5xl mb-4">⬇️</div>
+              <div className="flex justify-center mb-4">
+                <ArrowDown size={36} weight="duotone" color="var(--neon-green)" />
+              </div>
               <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: 'var(--neon-green)' }}>
                 Download Database
               </h2>
@@ -930,8 +1056,9 @@ export default function DatabasesPage() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="download-username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
-                  👤 DATABASE USERNAME
+                <label htmlFor="download-username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                  <UserCircle size={16} weight="duotone" />
+                  DATABASE USERNAME
                 </label>
                 <input
                   id="download-username"
@@ -944,8 +1071,9 @@ export default function DatabasesPage() {
               </div>
 
               <div>
-                <label htmlFor="download-password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  🔑 DATABASE PASSWORD
+                <label htmlFor="download-password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                  <Key size={16} weight="duotone" />
+                  DATABASE PASSWORD
                 </label>
                 <input
                   id="download-password"
@@ -968,8 +1096,9 @@ export default function DatabasesPage() {
               </label>
 
               <div className="p-4 rounded-lg border" style={{ background: 'rgba(255, 165, 0, 0.1)', borderColor: 'rgba(255, 165, 0, 0.35)' }}>
-                <p className="text-xs font-mono" style={{ color: 'var(--neon-yellow)' }}>
-                  ⚠️ This backs up the database only. Files/uploads are separate.
+                <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
+                  <WarningCircle size={14} weight="duotone" />
+                  This backs up the database only. Files/uploads are separate.
                 </p>
               </div>
 
@@ -989,7 +1118,10 @@ export default function DatabasesPage() {
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  ✕ Cancel
+                  <span className="inline-flex items-center gap-2">
+                    <X size={14} weight="bold" />
+                    Cancel
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1001,7 +1133,17 @@ export default function DatabasesPage() {
                     color: 'white',
                   }}
                 >
-                  {downloadingDb ? '⟳ Preparing...' : '⬇ Download Dump'}
+                  {downloadingDb ? (
+                    <span className="inline-flex items-center gap-2">
+                      <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                      Preparing...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <ArrowDown size={14} weight="duotone" />
+                      Download Dump
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

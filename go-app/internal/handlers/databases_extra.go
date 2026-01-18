@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -15,39 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"docklite-agent/internal/backup"
 	"docklite-agent/internal/store"
 )
 
 var identifierPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
-const (
-	databaseRetentionRoot  = "/var/backups/docklite/databases"
-	databaseRetentionCount = 7
-)
-
-type lazyHeaderWriter struct {
-	writer      http.ResponseWriter
-	headers     map[string]string
-	wroteHeader bool
-	bytes       int64
-}
-
-func (l *lazyHeaderWriter) Write(p []byte) (int, error) {
-	if !l.wroteHeader {
-		for key, value := range l.headers {
-			l.writer.Header().Set(key, value)
-		}
-		l.writer.WriteHeader(http.StatusOK)
-		l.wroteHeader = true
-	}
-	n, err := l.writer.Write(p)
-	l.bytes += int64(n)
-	return n, err
-}
-
-func (l *lazyHeaderWriter) BytesWritten() int64 {
-	return l.bytes
-}
+const databaseRetentionCount = 7
 
 func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -250,7 +222,7 @@ func (h *Handlers) updateDatabaseCredentials(w http.ResponseWriter, r *http.Requ
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -306,7 +278,7 @@ func (h *Handlers) DatabaseQuery(w http.ResponseWriter, r *http.Request, databas
 		Password string `json:"password"`
 		SQL      string `json:"sql"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -380,7 +352,7 @@ func (h *Handlers) DatabaseSchema(w http.ResponseWriter, r *http.Request, databa
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -492,7 +464,7 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
 		Password string `json:"password"`
 		Table    string `json:"table"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -610,7 +582,7 @@ func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, data
 		Password string `json:"password"`
 		Gzip     *bool  `json:"gzip"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -618,11 +590,6 @@ func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, data
 		writeError(w, http.StatusBadRequest, "username and password are required")
 		return
 	}
-	gzipEnabled := true
-	if body.Gzip != nil {
-		gzipEnabled = *body.Gzip
-	}
-
 	database, err := h.store.GetDatabaseByID(databaseID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -641,101 +608,47 @@ func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, data
 		return
 	}
 
-	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05Z")
-	baseName := fmt.Sprintf("docklite-%s-%s", database.Name, timestamp)
-	downloadName := fmt.Sprintf("%s.dump", baseName)
-	if gzipEnabled {
-		downloadName = fmt.Sprintf("%s.dump.gz", baseName)
+	notes := "download"
+	source := backup.ManifestSource{
+		DatabaseID:  &database.ID,
+		Name:        database.Name,
+		ContainerID: database.ContainerID,
 	}
-
-	responseWriter := &lazyHeaderWriter{
-		writer: w,
-		headers: map[string]string{
-			"Content-Type":        "application/octet-stream",
-			"Content-Disposition": fmt.Sprintf("attachment; filename=%q", downloadName),
-		},
-	}
-
-	retentionEnabled := true
-	if err := os.MkdirAll(databaseRetentionRoot, 0o755); err != nil {
-		retentionEnabled = false
-		log.Printf("database retention disabled: %v", err)
-	}
-
-	var fileWriter *os.File
-	var retentionName string
-	if retentionEnabled {
-		retentionName = downloadName
-		filePath := filepath.Join(databaseRetentionRoot, retentionName)
-		fileWriter, err = os.Create(filePath)
-		if err != nil {
-			retentionEnabled = false
-			log.Printf("database retention disabled: %v", err)
-		}
-	}
-
-	writer := io.Writer(w)
-	if retentionEnabled && fileWriter != nil {
-		writer = io.MultiWriter(responseWriter, fileWriter)
-	} else {
-		writer = responseWriter
-	}
-
-	var gzipWriter *gzip.Writer
-	if gzipEnabled {
-		gzipWriter = gzip.NewWriter(writer)
-		writer = gzipWriter
-	}
-
-	cmd := []string{"pg_dump", "-U", body.Username, "-d", database.Name, "-F", "c"}
-	env := []string{fmt.Sprintf("PGPASSWORD=%s", body.Password)}
-
-	execErr := h.docker.ExecCommandToWriter(dockerCtx, database.ContainerID, cmd, env, writer)
-
-	if gzipWriter != nil {
-		_ = gzipWriter.Close()
-	}
-	if fileWriter != nil {
-		_ = fileWriter.Close()
-	}
-
-	if execErr != nil {
-		if responseWriter.BytesWritten() == 0 {
-			writeError(w, http.StatusInternalServerError, "failed to create database dump")
-			return
-		}
-		log.Printf("database download failed after response started: %v", execErr)
+	artifact, err := backup.CreateDatabaseExport(dockerCtx, h.docker, h.backupBaseDir, "databases", database.Name, database.ContainerID, body.Username, &body.Password, source, notes)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create database dump")
 		return
 	}
 
-	if retentionEnabled {
-		manifest := map[string]any{
-			"app_name":      "DockLite",
-			"database_name": database.Name,
-			"container_id":  database.ContainerID,
-			"format":        "custom",
-			"created_at":    time.Now().UTC().Format(time.RFC3339),
-			"filename":      retentionName,
-			"gzip":          gzipEnabled,
-		}
-		manifestPath := filepath.Join(databaseRetentionRoot, fmt.Sprintf("%s.json", baseName))
-		if data, err := json.MarshalIndent(manifest, "", "  "); err == nil {
-			if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
-				log.Printf("manifest write failed: %v", err)
-			}
-		}
-		pruneDatabaseDumps(database.Name)
+	info, err := os.Stat(artifact.Path)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
 	}
+	file, err := os.Open(artifact.Path)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(artifact.Path)+"\"")
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+
+	pruneDatabaseDumps(h.backupBaseDir, database.Name)
 }
 
-func pruneDatabaseDumps(dbName string) {
-	entries, err := os.ReadDir(databaseRetentionRoot)
+func pruneDatabaseDumps(baseDir string, dbName string) {
+	root := filepath.Join(baseDir, "databases")
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		log.Printf("prune database dumps failed: %v", err)
 		return
 	}
 
-	prefix := fmt.Sprintf("docklite-%s-", dbName)
+	prefix := fmt.Sprintf("db-%s-", backup.SanitizeFilename(dbName))
 	type dumpFile struct {
 		path    string
 		modTime time.Time
@@ -758,7 +671,7 @@ func pruneDatabaseDumps(dbName string) {
 		base := strings.TrimSuffix(name, ".gz")
 		base = strings.TrimSuffix(base, ".dump")
 		dumps = append(dumps, dumpFile{
-			path:    filepath.Join(databaseRetentionRoot, name),
+			path:    filepath.Join(root, name),
 			modTime: info.ModTime(),
 			base:    base,
 		})
@@ -770,7 +683,8 @@ func pruneDatabaseDumps(dbName string) {
 
 	for i := databaseRetentionCount; i < len(dumps); i++ {
 		_ = os.Remove(dumps[i].path)
-		_ = os.Remove(filepath.Join(databaseRetentionRoot, fmt.Sprintf("%s.json", dumps[i].base)))
+		_ = os.Remove(filepath.Join(root, fmt.Sprintf("%s.json", dumps[i].base)))
+		_ = os.Remove(backup.ManifestPathForArtifact(dumps[i].path))
 	}
 }
 

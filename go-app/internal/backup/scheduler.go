@@ -1,42 +1,35 @@
 package backup
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"docklite-agent/internal/docker"
 	"docklite-agent/internal/store"
 )
 
-const defaultBackupPath = "/var/backups/docklite"
-
 type DestinationConfig struct {
 	Path string `json:"path"`
 }
 
-func StartScheduler(storeHandle *store.SQLiteStore, dockerClient *docker.Client) {
+func StartScheduler(storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string) {
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 
 		time.Sleep(30 * time.Second)
-		checkAndRunJobs(storeHandle, dockerClient)
+		checkAndRunJobs(storeHandle, dockerClient, backupBaseDir)
 
 		for range ticker.C {
-			checkAndRunJobs(storeHandle, dockerClient)
+			checkAndRunJobs(storeHandle, dockerClient, backupBaseDir)
 		}
 	}()
 }
 
-func TriggerJob(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, jobID int64) error {
+func TriggerJob(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string, jobID int64) error {
 	job, err := storeHandle.GetBackupJobByID(jobID)
 	if err != nil {
 		return err
@@ -44,17 +37,17 @@ func TriggerJob(ctx context.Context, storeHandle *store.SQLiteStore, dockerClien
 	if job == nil {
 		return fmt.Errorf("job %d not found", jobID)
 	}
-	return executeBackupJob(ctx, storeHandle, dockerClient, *job)
+	return executeBackupJob(ctx, storeHandle, dockerClient, backupBaseDir, *job)
 }
 
-func checkAndRunJobs(storeHandle *store.SQLiteStore, dockerClient *docker.Client) {
+func checkAndRunJobs(storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string) {
 	jobs, err := storeHandle.GetEnabledBackupJobs()
 	if err != nil {
 		return
 	}
 	for _, job := range jobs {
 		if shouldRunJob(job) {
-			_ = executeBackupJob(context.Background(), storeHandle, dockerClient, job)
+			_ = executeBackupJob(context.Background(), storeHandle, dockerClient, backupBaseDir, job)
 		}
 	}
 }
@@ -118,7 +111,7 @@ func calculateNextRunTime(frequency string) *string {
 	return &next
 }
 
-func executeBackupJob(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, job store.BackupJob) error {
+func executeBackupJob(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string, job store.BackupJob) error {
 	dest, err := storeHandle.GetBackupDestinationByID(job.Destination)
 	if err != nil {
 		return err
@@ -156,7 +149,7 @@ func executeBackupJob(ctx context.Context, storeHandle *store.SQLiteStore, docke
 	}
 
 	for _, target := range targets {
-		if err := executeDestinationBackup(ctx, storeHandle, dockerClient, job, *dest, target); err != nil {
+		if err := executeDestinationBackup(ctx, storeHandle, dockerClient, backupBaseDir, job, *dest, target); err != nil {
 			return err
 		}
 	}
@@ -172,17 +165,17 @@ type targetRef struct {
 	ID   int64
 }
 
-func executeDestinationBackup(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, job store.BackupJob, dest store.BackupDestination, target targetRef) error {
+func executeDestinationBackup(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string, job store.BackupJob, dest store.BackupDestination, target targetRef) error {
 	switch dest.Type {
 	case "local":
-		return executeLocalBackup(ctx, storeHandle, dockerClient, job, dest, target)
+		return executeLocalBackup(ctx, storeHandle, dockerClient, backupBaseDir, job, dest, target)
 	default:
 		return fmt.Errorf("%s backup not implemented", dest.Type)
 	}
 }
 
-func executeLocalBackup(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, job store.BackupJob, dest store.BackupDestination, target targetRef) error {
-	basePath := defaultBackupPath
+func executeLocalBackup(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, backupBaseDir string, job store.BackupJob, dest store.BackupDestination, target targetRef) error {
+	basePath := backupBaseDir
 	if dest.Config != "" {
 		var cfg DestinationConfig
 		if err := json.Unmarshal([]byte(dest.Config), &cfg); err == nil && cfg.Path != "" {
@@ -204,14 +197,13 @@ func executeLocalBackup(ctx context.Context, storeHandle *store.SQLiteStore, doc
 		return err
 	}
 
-	var backupPath string
-	var size int64
+	var artifact *ArtifactResult
 
 	switch target.Type {
 	case "site":
-		backupPath, size, err = backupSite(ctx, storeHandle, basePath, target.ID)
+		artifact, err = CreateSiteBackup(ctx, storeHandle, basePath, "sites", target.ID, "")
 	case "database":
-		backupPath, size, err = backupDatabase(ctx, storeHandle, dockerClient, basePath, target.ID)
+		artifact, err = CreateDatabaseBackup(ctx, storeHandle, dockerClient, basePath, "databases", target.ID, "")
 	default:
 		err = fmt.Errorf("unsupported target type")
 	}
@@ -222,86 +214,14 @@ func executeLocalBackup(ctx context.Context, storeHandle *store.SQLiteStore, doc
 		return err
 	}
 
-	_ = storeHandle.UpdateBackupStatus(backupID, "success", nil, &size, &backupPath)
+	if artifact != nil {
+		_ = storeHandle.UpdateBackupStatus(backupID, "success", nil, &artifact.Size, &artifact.Path)
+	} else {
+		_ = storeHandle.UpdateBackupStatus(backupID, "success", nil, nil, nil)
+	}
+
+	if job.RetentionDays > 0 {
+		_ = cleanupOldBackups(storeHandle, dest.ID, job.RetentionDays)
+	}
 	return nil
-}
-
-func backupSite(ctx context.Context, storeHandle *store.SQLiteStore, destination string, siteID int64) (string, int64, error) {
-	site, err := storeHandle.GetSiteByID(siteID)
-	if err != nil {
-		return "", 0, err
-	}
-	if site == nil {
-		return "", 0, fmt.Errorf("site %d not found", siteID)
-	}
-	if site.CodePath == "" {
-		return "", 0, fmt.Errorf("site path not set")
-	}
-
-	if err := os.MkdirAll(destination, 0o755); err != nil {
-		return "", 0, err
-	}
-
-	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05")
-	filename := fmt.Sprintf("site-%s-%s.tar.gz", site.Domain, timestamp)
-	backupPath := filepath.Join(destination, filename)
-
-	cmd := exec.CommandContext(ctx, "tar", "-czf", backupPath, "-C", filepath.Dir(site.CodePath), filepath.Base(site.CodePath))
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", 0, fmt.Errorf("tar failed: %s", strings.TrimSpace(string(output)))
-	}
-
-	stat, err := os.Stat(backupPath)
-	if err != nil {
-		return "", 0, err
-	}
-	return backupPath, stat.Size(), nil
-}
-
-func backupDatabase(ctx context.Context, storeHandle *store.SQLiteStore, dockerClient *docker.Client, destination string, databaseID int64) (string, int64, error) {
-	database, err := storeHandle.GetDatabaseByID(databaseID)
-	if err != nil {
-		return "", 0, err
-	}
-	if database == nil {
-		return "", 0, fmt.Errorf("database %d not found", databaseID)
-	}
-	if database.ContainerID == "" {
-		return "", 0, fmt.Errorf("database container not found")
-	}
-
-	if err := os.MkdirAll(destination, 0o755); err != nil {
-		return "", 0, err
-	}
-
-	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05")
-	filename := fmt.Sprintf("database-%s-%s.sql.gz", database.Name, timestamp)
-	backupPath := filepath.Join(destination, filename)
-
-	file, err := os.Create(backupPath)
-	if err != nil {
-		return "", 0, err
-	}
-	defer file.Close()
-
-	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close()
-
-	cmd := []string{"pg_dump", "-U", "docklite", database.Name}
-	if err := dockerClient.ExecCommandToWriter(ctx, database.ContainerID, cmd, nil, gzipWriter); err != nil {
-		return "", 0, err
-	}
-
-	if err := gzipWriter.Close(); err != nil {
-		return "", 0, err
-	}
-	if err := file.Sync(); err != nil {
-		return "", 0, err
-	}
-
-	stat, err := os.Stat(backupPath)
-	if err != nil {
-		return "", 0, err
-	}
-	return backupPath, stat.Size(), nil
 }

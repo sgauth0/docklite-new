@@ -58,7 +58,7 @@ func (h *Handlers) AuthLogin(w http.ResponseWriter, r *http.Request) {
 
 	var req loginRequest
 	if expectsJSON {
-		if err := readJSON(r, &req); err != nil {
+		if err := readJSON(w, r, &req); err != nil {
 			respondLoginError(w, r, shouldRedirect, http.StatusBadRequest, "invalid request body")
 			return
 		}

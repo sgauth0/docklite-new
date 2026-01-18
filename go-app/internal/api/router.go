@@ -40,6 +40,7 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	mux.HandleFunc("/api/backups/local", handlers.Auth(handlers.LocalBackups))
 	mux.HandleFunc("/api/backups/local/download", handlers.Auth(handlers.LocalBackupDownload))
 	mux.HandleFunc("/api/backups/trigger", handlers.Auth(handlers.BackupTrigger))
+	mux.HandleFunc("/api/backups/export", handlers.Auth(handlers.BackupExport))
 	mux.HandleFunc("/api/dns/config", handlers.Auth(handlers.DNSConfig))
 	mux.HandleFunc("/api/dns/zones", handlers.Auth(handlers.DNSZones))
 	mux.HandleFunc("/api/dns/records", handlers.Auth(handlers.DNSRecords))

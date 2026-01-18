@@ -1,6 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  DesktopTower,
+  Monitor,
+  Globe,
+  TerminalWindow,
+  Gear,
+  Clock,
+  Lightning,
+  Fire,
+  Database,
+  Sparkle,
+  ChartBar,
+  Cube,
+  Tag,
+  Package,
+  Disc,
+  ChartLine,
+  ArrowDown,
+  ArrowUp,
+  SpinnerGap,
+} from '@phosphor-icons/react';
 
 export default function ServerPage() {
   const [serverInfo, setServerInfo] = useState({
@@ -77,8 +98,9 @@ export default function ServerPage() {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-          ⟳ Loading...
+        <div className="text-2xl font-bold neon-text flex items-center justify-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+          <SpinnerGap size={20} weight="duotone" className="animate-spin" />
+          Loading...
         </div>
       </div>
     );
@@ -88,11 +110,12 @@ export default function ServerPage() {
     <div className="max-w-[1400px] mx-auto">
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold neon-text" style={{ color: 'var(--neon-green)' }}>
-            🖥️ Server Overview
+          <h1 className="text-3xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+            <DesktopTower size={22} weight="duotone" />
+            Server Overview
           </h1>
           <p className="mt-1 text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▸ System information and resource usage ◂
+            System information and resource usage
           </p>
         </div>
       </div>
@@ -100,24 +123,37 @@ export default function ServerPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* System Info */}
         <div className="card-vapor p-6 rounded-xl">
-          <h2 className="text-xl font-bold mb-4 neon-text" style={{ color: 'var(--neon-cyan)' }}>
-            💻 System Information
+          <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <Monitor size={18} weight="duotone" />
+            System Information
           </h2>
           <dl className="space-y-3">
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>🌐 HOSTNAME</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Globe size={14} weight="duotone" />
+                HOSTNAME
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{serverInfo.hostname}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>🐧 PLATFORM</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <TerminalWindow size={14} weight="duotone" />
+                PLATFORM
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{serverInfo.platform}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>⚙️ ARCH</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Gear size={14} weight="duotone" />
+                ARCH
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{serverInfo.arch}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>⏱️ UPTIME</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Clock size={14} weight="duotone" />
+                UPTIME
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--neon-green)' }}>{formatUptime(serverInfo.uptime)}</dd>
             </div>
           </dl>
@@ -125,24 +161,37 @@ export default function ServerPage() {
 
         {/* Resources */}
         <div className="card-vapor p-6 rounded-xl">
-          <h2 className="text-xl font-bold mb-4 neon-text" style={{ color: 'var(--neon-pink)' }}>
-            ⚡ Resources
+          <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+            <Lightning size={18} weight="duotone" />
+            Resources
           </h2>
           <dl className="space-y-3">
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>🔥 CPU CORES</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Fire size={14} weight="duotone" />
+                CPU CORES
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{serverInfo.cpus} cores</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>💾 TOTAL MEMORY</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Database size={14} weight="duotone" />
+                TOTAL MEMORY
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{formatMemory(serverInfo.totalMemory)}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>✨ AVAILABLE</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Sparkle size={14} weight="duotone" />
+                AVAILABLE
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--neon-green)' }}>{formatMemory(serverInfo.freeMemory)}</dd>
             </div>
             <div>
-              <dt className="text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>📊 MEMORY USAGE</dt>
+              <dt className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <ChartBar size={14} weight="duotone" />
+                MEMORY USAGE
+              </dt>
               <dd>
                 <div className="overflow-hidden h-4 rounded-lg" style={{
                   background: 'rgba(26, 10, 46, 0.6)',
@@ -167,20 +216,30 @@ export default function ServerPage() {
 
         {/* Docker Info */}
         <div className="card-vapor p-6 rounded-xl">
-          <h2 className="text-xl font-bold mb-4 neon-text" style={{ color: 'var(--neon-purple)' }}>
-            🐳 Docker
+          <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+            <Cube size={18} weight="duotone" />
+            Docker
           </h2>
           <dl className="space-y-3">
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>📦 VERSION</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Tag size={14} weight="duotone" />
+                VERSION
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--text-primary)' }}>{serverInfo.dockerVersion}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>🚀 CONTAINERS</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Package size={14} weight="duotone" />
+                CONTAINERS
+              </dt>
               <dd className="text-sm font-mono badge-running">{serverInfo.containerCount} RUNNING</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>💿 IMAGES</dt>
+              <dt className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Disc size={14} weight="duotone" />
+                IMAGES
+              </dt>
               <dd className="text-sm font-mono" style={{ color: 'var(--neon-cyan)' }}>{serverInfo.imageCount} total</dd>
             </div>
           </dl>
@@ -189,14 +248,18 @@ export default function ServerPage() {
 
       {/* Real-time Metrics */}
       <div className="mt-6">
-        <h2 className="text-2xl font-bold neon-text mb-4" style={{ color: 'var(--neon-cyan)' }}>
-          📊 Real-time Metrics
+        <h2 className="text-2xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+          <ChartLine size={20} weight="duotone" />
+          Real-time Metrics
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* CPU Usage */}
           <div className="card-vapor p-6 rounded-xl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>🔥 CPU USAGE</h3>
+              <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Fire size={14} weight="duotone" />
+                CPU USAGE
+              </h3>
               <span className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
                 {serverInfo.cpuUsage}%
               </span>
@@ -219,7 +282,10 @@ export default function ServerPage() {
           {/* Memory Usage */}
           <div className="card-vapor p-6 rounded-xl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>💾 MEMORY</h3>
+              <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Database size={14} weight="duotone" />
+                MEMORY
+              </h3>
               <span className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-pink)' }}>
                 {memoryUsedPercent}%
               </span>
@@ -245,7 +311,10 @@ export default function ServerPage() {
           {/* Disk Usage */}
           <div className="card-vapor p-6 rounded-xl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--neon-purple)' }}>💿 DISK</h3>
+              <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                <Disc size={14} weight="duotone" />
+                DISK
+              </h3>
               <span className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-green)' }}>
                 {serverInfo.diskUsage.percentage}%
               </span>
@@ -270,16 +339,25 @@ export default function ServerPage() {
 
           {/* Network Stats */}
           <div className="card-vapor p-6 rounded-xl">
-            <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--neon-purple)' }}>🌐 NETWORK</h3>
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+              <Globe size={14} weight="duotone" />
+              NETWORK
+            </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>⬇️ Received</span>
+                <span className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                  <ArrowDown size={12} weight="duotone" />
+                  Received
+                </span>
                 <span className="text-sm font-bold" style={{ color: 'var(--neon-cyan)' }}>
                   {formatBytes(serverInfo.networkStats.received)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>⬆️ Transmitted</span>
+                <span className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                  <ArrowUp size={12} weight="duotone" />
+                  Transmitted
+                </span>
                 <span className="text-sm font-bold" style={{ color: 'var(--neon-pink)' }}>
                   {formatBytes(serverInfo.networkStats.transmitted)}
                 </span>

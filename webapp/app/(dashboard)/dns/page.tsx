@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Globe, Plus, ArrowsClockwise, Gear } from '@phosphor-icons/react';
+import { useState, useEffect, useCallback } from 'react';
+import { Globe, Plus, ArrowsClockwise, Gear, WarningCircle, Lock } from '@phosphor-icons/react';
 import AddDnsZoneModal from '../components/AddDnsZoneModal';
 import AddDnsRecordModal from '../components/AddDnsRecordModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import SslStatus from '../components/SslStatus';
 
-export default function DNSPage() {
-  const [activeTab, setActiveTab] = useState<'config' | 'zones' | 'records'>('config');
+export default function NetworkPage() {
+  const [activeTab, setActiveTab] = useState<'config' | 'zones' | 'records' | 'ssl'>('config');
   const [config, setConfig] = useState<any>(null);
   const [zones, setZones] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
@@ -19,18 +20,7 @@ export default function DNSPage() {
   const [deleteRecord, setDeleteRecord] = useState<{ id: number; name: string; type: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => {
-    loadConfig();
-    loadZones();
-  }, []);
-
-  useEffect(() => {
-    if (selectedZone && activeTab === 'records') {
-      loadRecords(selectedZone);
-    }
-  }, [selectedZone, activeTab]);
-
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/dns/config');
       const data = await res.json();
@@ -38,9 +28,9 @@ export default function DNSPage() {
     } catch (error) {
       console.error('Error loading config:', error);
     }
-  };
+  }, []);
 
-  const loadZones = async () => {
+  const loadZones = useCallback(async () => {
     try {
       const res = await fetch('/api/dns/zones');
       const data = await res.json();
@@ -51,9 +41,9 @@ export default function DNSPage() {
     } catch (error) {
       console.error('Error loading zones:', error);
     }
-  };
+  }, [selectedZone]);
 
-  const loadRecords = async (zoneId: number) => {
+  const loadRecords = useCallback(async (zoneId: number) => {
     try {
       const res = await fetch(`/api/dns/records?zone_id=${zoneId}`);
       const data = await res.json();
@@ -61,7 +51,18 @@ export default function DNSPage() {
     } catch (error) {
       console.error('Error loading records:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadConfig();
+    loadZones();
+  }, [loadConfig, loadZones]);
+
+  useEffect(() => {
+    if (selectedZone && activeTab === 'records') {
+      loadRecords(selectedZone);
+    }
+  }, [selectedZone, activeTab, loadRecords]);
 
   const saveConfig = async (apiToken: string) => {
     setLoading(true);
@@ -104,7 +105,7 @@ export default function DNSPage() {
       setDeleteZone(null);
       alert('✓ DNS zone deleted successfully');
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setDeleteLoading(false);
     }
@@ -127,7 +128,7 @@ export default function DNSPage() {
       setDeleteRecord(null);
       alert('✓ DNS record deleted successfully');
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setDeleteLoading(false);
     }
@@ -153,17 +154,17 @@ export default function DNSPage() {
         // Better error messages
         let errorMsg = data.error;
         if (errorMsg.includes('API token not configured')) {
-          errorMsg = '⚠️ Cloudflare API token not configured.\n\nPlease go to the Configuration tab and add your API token first.';
+          errorMsg = 'Cloudflare API token not configured.\n\nPlease go to the Configuration tab and add your API token first.';
         } else if (errorMsg.includes('No zones to sync')) {
-          errorMsg = '⚠️ No DNS zones configured.\n\nPlease add a DNS zone first using the "Add Zone" button in the Zones tab.';
+          errorMsg = 'No DNS zones configured.\n\nPlease add a DNS zone first using the "Add Zone" button in the Zones tab.';
         } else if (errorMsg.includes('integration is disabled')) {
-          errorMsg = '⚠️ Cloudflare integration is disabled.\n\nPlease enable it in the Configuration tab.';
+          errorMsg = 'Cloudflare integration is disabled.\n\nPlease enable it in the Configuration tab.';
         }
         alert(errorMsg);
       }
     } catch (error) {
       console.error('Error syncing records:', error);
-      alert('❌ Failed to sync records. Please check your network connection and try again.');
+      alert('Failed to sync records. Please check your network connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -172,12 +173,17 @@ export default function DNSPage() {
   return (
     <div className="max-w-[1400px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold neon-text-pink">
+        <div>
+          <h1 className="text-3xl font-bold neon-text-pink">
           <Globe size={32} weight="duotone" color="#d90fd9" className="inline mr-2" />
-          DNS Management
-        </h1>
+            Network
+          </h1>
+          <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
+            DNS zones, records, and SSL monitoring
+          </p>
+        </div>
         <div className="flex gap-2">
-          {config?.hasToken && (
+          {config?.hasToken && activeTab !== 'ssl' && (
             <button
               onClick={syncRecords}
               disabled={loading}
@@ -224,37 +230,52 @@ export default function DNSPage() {
         >
           DNS Records
         </button>
+        <button
+          onClick={() => setActiveTab('ssl')}
+          className={`px-4 py-2 font-bold transition-colors ${
+            activeTab === 'ssl'
+              ? 'border-b-2 border-neon-pink text-neon-pink'
+              : 'text-gray-400 hover:text-neon-cyan'
+          }`}
+        >
+          <Lock size={20} weight="duotone" className="inline mr-2" />
+          SSL
+        </button>
       </div>
 
       {/* Content */}
-      <div className="cyber-card p-6">
-        {activeTab === 'config' && (
-          <ConfigTab
-            config={config}
-            onSave={saveConfig}
-            loading={loading}
-          />
-        )}
-        {activeTab === 'zones' && (
-          <ZonesTab
-            zones={zones}
-            onRefresh={loadZones}
-            onAddZone={() => setShowAddZoneModal(true)}
-            onDeleteZone={(id: number, domain: string) => setDeleteZone({ id, domain })}
-          />
-        )}
-        {activeTab === 'records' && (
-          <RecordsTab
-            records={records}
-            zones={zones}
-            selectedZone={selectedZone}
-            onZoneChange={setSelectedZone}
-            onRefresh={() => selectedZone && loadRecords(selectedZone)}
-            onAddRecord={() => setShowAddRecordModal(true)}
-            onDeleteRecord={(id: number, name: string, type: string) => setDeleteRecord({ id, name, type })}
-          />
-        )}
-      </div>
+      {activeTab === 'ssl' ? (
+        <SslStatus />
+      ) : (
+        <div className="cyber-card p-6">
+          {activeTab === 'config' && (
+            <ConfigTab
+              config={config}
+              onSave={saveConfig}
+              loading={loading}
+            />
+          )}
+          {activeTab === 'zones' && (
+            <ZonesTab
+              zones={zones}
+              onRefresh={loadZones}
+              onAddZone={() => setShowAddZoneModal(true)}
+              onDeleteZone={(id: number, domain: string) => setDeleteZone({ id, domain })}
+            />
+          )}
+          {activeTab === 'records' && (
+            <RecordsTab
+              records={records}
+              zones={zones}
+              selectedZone={selectedZone}
+              onZoneChange={setSelectedZone}
+              onRefresh={() => selectedZone && loadRecords(selectedZone)}
+              onAddRecord={() => setShowAddRecordModal(true)}
+              onDeleteRecord={(id: number, name: string, type: string) => setDeleteRecord({ id, name, type })}
+            />
+          )}
+        </div>
+      )}
 
       {showAddZoneModal && (
         <AddDnsZoneModal
@@ -339,7 +360,10 @@ function ConfigTab({ config, onSave, loading }: any) {
             Status: {config?.hasToken ? (
               <span className="text-neon-green">✓ Configured</span>
             ) : (
-              <span className="text-yellow-500">⚠ Not configured</span>
+              <span className="text-yellow-500 flex items-center gap-2">
+                <WarningCircle size={14} weight="duotone" />
+                Not configured
+              </span>
             )}
           </p>
           {config?.hasToken && (
@@ -464,7 +488,10 @@ function RecordsTab({ records, zones, selectedZone, onZoneChange, onRefresh, onA
               color: '#ffa500',
             }}
           >
-            ⚠️ Add a zone first to create records
+            <span className="inline-flex items-center gap-2">
+              <WarningCircle size={14} weight="duotone" />
+              Add a zone first to create records
+            </span>
           </div>
         ) : (
           <button

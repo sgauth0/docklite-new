@@ -36,10 +36,10 @@ func main() {
 		log.Fatalf("failed to ensure bootstrap token: %v", err)
 	}
 
-	handlers := handlers.New(dockerClient, sqliteStore, cfg.Token)
+	handlers := handlers.New(dockerClient, sqliteStore, cfg.Token, cfg.BackupBaseDir)
 	router := api.NewRouter(handlers, cfg.NextjsURL)
 
-	backup.StartScheduler(sqliteStore, dockerClient)
+	backup.StartScheduler(sqliteStore, dockerClient, cfg.BackupBaseDir)
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { TreeStructure, FolderSimple, FileText, CaretDown, CaretRight } from '@phosphor-icons/react';
 
 interface ColumnInfo {
   name: string;
@@ -97,8 +98,9 @@ export default function SchemaBrowser() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="text-xs font-bold" style={{ color: 'var(--neon-cyan)' }}>
-        🧬 Schema Browser
+      <div className="text-xs font-bold flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+        <TreeStructure size={14} weight="duotone" />
+        Schema Browser
       </div>
       {tables.length === 0 ? (
         <div className="text-xs font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
@@ -119,8 +121,10 @@ export default function SchemaBrowser() {
                     window.dispatchEvent(new CustomEvent('docklite-db-select', { detail: { table: table.name } }));
                   }}
                 >
-                  <span className="text-sm">{isExpanded ? '▾' : '▸'}</span>
-                  <span className="text-sm">🗂️</span>
+                  <span className="text-sm">
+                    {isExpanded ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
+                  </span>
+                  <FolderSimple size={14} weight="duotone" />
                   <span className="truncate font-bold">{table.name}</span>
                 </button>
                 {isExpanded && (
@@ -130,7 +134,7 @@ export default function SchemaBrowser() {
                         <span className="opacity-70" style={{ color: 'var(--text-secondary)' }}>
                           ├
                         </span>
-                        <span>📄</span>
+                        <FileText size={12} weight="duotone" />
                         <span style={{ color: 'var(--neon-cyan)' }}>{column.name}</span>
                         <span className="opacity-70" style={{ color: 'var(--text-secondary)' }}>
                           {column.type}

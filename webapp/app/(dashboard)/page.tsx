@@ -8,9 +8,8 @@ import AllContainersModal from './components/AllContainersModal';
 import AddFolderModal from './components/AddFolderModal';
 import FolderSection from './components/FolderSection';
 import SkeletonLoader from './components/SkeletonLoader';
-import SslStatus from './components/SslStatus';
 import { useToast } from '@/lib/hooks/useToast';
-import { Flower, Database, Lightning, Package, ArrowsClockwise, FolderPlus, PlusCircle } from '@phosphor-icons/react';
+import { Database, Lightning, Package, ArrowsClockwise, FolderPlus, PlusCircle, WarningCircle, SpinnerGap } from '@phosphor-icons/react';
 import AddContainerModal from './components/AddContainerModal';
 import {
   DndContext,
@@ -205,16 +204,6 @@ export default function DashboardPage() {
     return 'other';
   };
 
-  const getContainerBadge = (container: ContainerInfo): React.ReactNode => {
-    const type = getContainerType(container);
-    const iconStyle = {
-      color: '#00ffff',
-      filter: 'drop-shadow(0 0 6px #00ffff80) drop-shadow(0 0 10px #00ffff60)',
-    };
-    if (type === 'site') return <Flower size={32} weight="duotone" style={iconStyle} />;
-    if (type === 'database') return <Database size={32} weight="duotone" style={iconStyle} />;
-    return <Lightning size={32} weight="duotone" style={iconStyle} />;
-  };
 
   const filterContainers = (containers: ContainerInfo[]): ContainerInfo[] => {
     if (filterType === 'all') return containers;
@@ -472,11 +461,13 @@ export default function DashboardPage() {
     return (
       <div className="max-w-[1400px] mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-            📦 Containers
+          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <Package size={26} weight="duotone" />
+            Containers
           </h1>
-          <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▶ LOADING... ◀
+          <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+            <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+            Loading...
           </p>
         </div>
         <SkeletonLoader type="card" count={6} />
@@ -488,7 +479,9 @@ export default function DashboardPage() {
     return (
       <div className="text-center py-16">
         <div className="mb-8">
-          <div className="text-6xl mb-4 animate-pulse">⚠️</div>
+          <div className="flex justify-center mb-4 animate-pulse">
+            <WarningCircle size={48} weight="duotone" color="#ff6b6b" />
+          </div>
           <div className="text-xl font-bold mb-2" style={{ color: '#ff6b6b' }}>
             System Error Detected
           </div>
@@ -505,12 +498,13 @@ export default function DashboardPage() {
     <div className="max-w-[1400px] mx-auto">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-            📦 Containers
+          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <Package size={26} weight="duotone" />
+            Containers
           </h1>
           <div className="flex items-center gap-3">
             <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-              ▶ SYSTEM STATUS: ONLINE ◀
+              System status: online
             </p>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full" style={{
               background: 'rgba(57, 255, 20, 0.2)',
@@ -606,7 +600,6 @@ export default function DashboardPage() {
               <FolderSection
                 key={folderNode.id}
                 folderNode={folderNode}
-                getContainerBadge={getContainerBadge}
                 onAction={handleAction}
                 onViewDetails={(id, name) => {
                   setSelectedContainerId(id);
@@ -629,11 +622,6 @@ export default function DashboardPage() {
           </div>
         </DndContext>
       )}
-
-      {/* SSL Certificates Status */}
-      <div className="mt-12">
-        <SslStatus />
-      </div>
 
       {selectedContainerId && (
         <ContainerDetailsModal

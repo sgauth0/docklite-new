@@ -1,6 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  MagnifyingGlass,
+  CheckCircle,
+  XCircle,
+  WarningCircle,
+  Question,
+  ArrowClockwise,
+  Lightbulb,
+  SpinnerGap,
+} from '@phosphor-icons/react';
 
 interface DebugData {
   status: string;
@@ -59,14 +69,14 @@ export default function DebugPage() {
       case 'connected':
       case 'authenticated':
       case 'healthy':
-        return '✅';
+        return <CheckCircle size={20} weight="duotone" />;
       case 'error':
       case 'unhealthy':
-        return '❌';
+        return <XCircle size={20} weight="duotone" />;
       case 'not_authenticated':
-        return '⚠️';
+        return <WarningCircle size={20} weight="duotone" />;
       default:
-        return '❓';
+        return <Question size={20} weight="duotone" />;
     }
   };
 
@@ -90,11 +100,15 @@ export default function DebugPage() {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8 text-center">
-            🔍 DockLite Debug Dashboard
+          <h1 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+            <MagnifyingGlass size={28} weight="duotone" />
+            DockLite Debug Dashboard
           </h1>
           <div className="text-center">
-            <div className="text-2xl mb-4">⟳ Loading debug information...</div>
+            <div className="text-2xl mb-4 flex items-center justify-center gap-2">
+              <SpinnerGap size={22} weight="duotone" className="animate-spin" />
+              Loading debug information...
+            </div>
             <div className="text-gray-400">This may take a few seconds</div>
           </div>
         </div>
@@ -106,11 +120,15 @@ export default function DebugPage() {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8 text-center">
-            🔍 DockLite Debug Dashboard
+          <h1 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+            <MagnifyingGlass size={28} weight="duotone" />
+            DockLite Debug Dashboard
           </h1>
           <div className="bg-red-900 border border-red-700 rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4 text-red-400">❌ Error</h2>
+            <h2 className="text-2xl font-bold mb-4 text-red-400 flex items-center gap-2">
+              <XCircle size={22} weight="duotone" />
+              Error
+            </h2>
             <p className="text-red-300 mb-4">{error}</p>
             <button
               onClick={fetchDebugData}
@@ -128,8 +146,9 @@ export default function DebugPage() {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8 text-center">
-            🔍 DockLite Debug Dashboard
+          <h1 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+            <MagnifyingGlass size={28} weight="duotone" />
+            DockLite Debug Dashboard
           </h1>
           <div className="text-center text-gray-400">
             No debug data available
@@ -142,8 +161,9 @@ export default function DebugPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">
-          🔍 DockLite Debug Dashboard
+        <h1 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+          <MagnifyingGlass size={28} weight="duotone" />
+          DockLite Debug Dashboard
         </h1>
 
         {/* Overall Status */}
@@ -154,8 +174,9 @@ export default function DebugPage() {
         }`}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-2">
-                {getStatusIcon(data.status)} System Status: {data.status.toUpperCase()}
+              <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                {getStatusIcon(data.status)}
+                System Status: {data.status.toUpperCase()}
               </h2>
               <p className="text-gray-300">
                 Last updated: {new Date(data.debug.timestamp).toLocaleString()}
@@ -163,9 +184,10 @@ export default function DebugPage() {
             </div>
             <button
               onClick={fetchDebugData}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded inline-flex items-center gap-2"
             >
-              🔄 Refresh
+              <ArrowClockwise size={16} weight="duotone" />
+              Refresh
             </button>
           </div>
         </div>
@@ -277,8 +299,9 @@ export default function DebugPage() {
 
         {/* Troubleshooting Tips */}
         <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-6">
-          <h3 className="text-xl font-bold mb-4 text-yellow-400">
-            💡 Troubleshooting Tips
+          <h3 className="text-xl font-bold mb-4 text-yellow-400 flex items-center gap-2">
+            <Lightbulb size={20} weight="duotone" />
+            Troubleshooting Tips
           </h3>
           <div className="space-y-2 text-yellow-200">
             <p><strong>Database Issues:</strong> Check if the data/docklite.db file exists and is writable.</p>

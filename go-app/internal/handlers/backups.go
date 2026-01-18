@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,9 +14,8 @@ import (
 	"time"
 
 	"docklite-agent/internal/backup"
+	"docklite-agent/internal/store"
 )
-
-const defaultBackupPath = "/var/backups/docklite"
 
 func (h *Handlers) Backups(w http.ResponseWriter, r *http.Request) {
 	if !isAdminRole(r) {
@@ -31,6 +32,139 @@ func (h *Handlers) Backups(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
+
+func (h *Handlers) BackupExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var body struct {
+		TargetType    string `json:"target_type"`
+		TargetID      int64  `json:"target_id"`
+		Delivery      string `json:"delivery"`
+		RetentionDays *int   `json:"retention_days"`
+		Notes         string `json:"notes"`
+	}
+	if err := readJSON(w, r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.TargetType == "" || body.TargetID <= 0 {
+		writeError(w, http.StatusBadRequest, "missing required fields: target_type, target_id")
+		return
+	}
+
+	delivery := strings.TrimSpace(body.Delivery)
+	if delivery == "" {
+		delivery = "download"
+	}
+	if delivery != "download" && delivery != "local" {
+		writeError(w, http.StatusBadRequest, "invalid delivery")
+		return
+	}
+
+	if body.TargetType == "site" {
+		if !isAdminRole(r) {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+	} else if body.TargetType == "database" {
+		if !isAdminRole(r) {
+			userID, ok := readUserIDFromContext(r)
+			if !ok || userID <= 0 {
+				writeError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			allowed, err := h.store.HasDatabaseAccess(userID, body.TargetID)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if !allowed {
+				writeError(w, http.StatusForbidden, "forbidden")
+				return
+			}
+		}
+	} else {
+		writeError(w, http.StatusBadRequest, "invalid target_type")
+		return
+	}
+
+	dest, err := h.ensureLocalDestination()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	record := store.BackupRecord{
+		JobID:       nil,
+		Destination: dest.ID,
+		TargetType:  body.TargetType,
+		TargetID:    body.TargetID,
+		BackupPath:  "",
+		SizeBytes:   0,
+		Status:      "in_progress",
+	}
+	backupID, err := h.store.CreateBackup(record)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	subDir := "downloads"
+	if delivery == "local" {
+		if body.TargetType == "site" {
+			subDir = "sites"
+		} else {
+			subDir = "databases"
+		}
+	}
+
+	var artifact *backup.ArtifactResult
+	switch body.TargetType {
+	case "site":
+		artifact, err = backup.CreateSiteBackup(r.Context(), h.store, h.backupBaseDir, subDir, body.TargetID, body.Notes)
+	case "database":
+		artifact, err = backup.CreateDatabaseBackup(r.Context(), h.store, h.docker, h.backupBaseDir, subDir, body.TargetID, body.Notes)
+	}
+
+	if err != nil {
+		message := err.Error()
+		_ = h.store.UpdateBackupStatus(backupID, "failed", &message, nil, nil)
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if artifact != nil {
+		_ = h.store.UpdateBackupStatus(backupID, "success", nil, &artifact.Size, &artifact.Path)
+	}
+
+	if delivery == "download" && artifact != nil {
+		downloadURL := "/api/backups/local/download?file=" + url.QueryEscape(artifact.RelativePath)
+		time.AfterFunc(time.Hour, func() {
+			_ = backup.RemoveBackupArtifacts(artifact.Path)
+			_ = h.store.DeleteBackup(backupID)
+		})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"backup_id":    backupID,
+			"download_url": downloadURL,
+		})
+		return
+	}
+
+	if delivery == "local" && body.RetentionDays != nil && *body.RetentionDays > 0 {
+		cutoff := time.Now().UTC().AddDate(0, 0, -*body.RetentionDays).Format("2006-01-02 15:04:05")
+		records, err := h.store.ListOldBackups(dest.ID, cutoff)
+		if err == nil {
+			for _, record := range records {
+				_ = backup.RemoveBackupArtifacts(record.BackupPath)
+				_ = h.store.DeleteBackup(record.ID)
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"backup_id": backupID})
 }
 
 func (h *Handlers) BackupDestinations(w http.ResponseWriter, r *http.Request) {
@@ -53,12 +187,16 @@ func (h *Handlers) BackupDestinations(w http.ResponseWriter, r *http.Request) {
 			Config  json.RawMessage `json:"config"`
 			Enabled *int            `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 		if body.Name == "" || body.Type == "" || len(body.Config) == 0 {
 			writeError(w, http.StatusBadRequest, "missing required fields: name, type, config")
+			return
+		}
+		if body.Type != "local" {
+			writeError(w, http.StatusBadRequest, "only local destinations are supported")
 			return
 		}
 		enabled := 1
@@ -79,7 +217,7 @@ func (h *Handlers) BackupDestinations(w http.ResponseWriter, r *http.Request) {
 			Config  json.RawMessage `json:"config"`
 			Enabled *int            `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -92,6 +230,10 @@ func (h *Handlers) BackupDestinations(w http.ResponseWriter, r *http.Request) {
 			params["name"] = *body.Name
 		}
 		if body.Type != nil {
+			if *body.Type != "local" {
+				writeError(w, http.StatusBadRequest, "only local destinations are supported")
+				return
+			}
 			params["type"] = *body.Type
 		}
 		if body.Config != nil {
@@ -159,7 +301,7 @@ func (h *Handlers) BackupJobs(w http.ResponseWriter, r *http.Request) {
 			RetentionDays *int   `json:"retention_days"`
 			Enabled       *int   `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -191,7 +333,7 @@ func (h *Handlers) BackupJobs(w http.ResponseWriter, r *http.Request) {
 			RetentionDays *int    `json:"retention_days"`
 			Enabled       *int    `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -249,6 +391,16 @@ func (h *Handlers) BackupHistory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	backups, err := h.store.ListBackups()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, record := range backups {
+		if record.BackupPath != "" {
+			_ = backup.RemoveBackupArtifacts(record.BackupPath)
+		}
+	}
 	deleted, err := h.store.ClearBackupHistory()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -269,7 +421,7 @@ func (h *Handlers) BackupTrigger(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		JobID int64 `json:"job_id"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -278,7 +430,7 @@ func (h *Handlers) BackupTrigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go func() {
-		_ = backup.TriggerJob(context.Background(), h.store, h.docker, body.JobID)
+		_ = backup.TriggerJob(context.Background(), h.store, h.docker, h.backupBaseDir, body.JobID)
 	}()
 	writeJSON(w, http.StatusOK, map[string]any{"message": "Backup job triggered successfully"})
 }
@@ -290,41 +442,22 @@ func (h *Handlers) LocalBackups(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		entries, err := os.ReadDir(defaultBackupPath)
+		files, err := h.listBackupFiles()
 		if err != nil {
-			if os.IsNotExist(err) {
-				writeJSON(w, http.StatusOK, map[string]any{"path": defaultBackupPath, "files": []any{}})
-				return
-			}
 			writeError(w, http.StatusInternalServerError, "internal server error")
 			return
-		}
-		files := make([]map[string]any, 0)
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			info, err := entry.Info()
-			if err != nil {
-				continue
-			}
-			files = append(files, map[string]any{
-				"name":        entry.Name(),
-				"size":        info.Size(),
-				"modified_at": info.ModTime().UTC().Format(time.RFC3339),
-			})
 		}
 		sort.Slice(files, func(i, j int) bool {
 			return files[i]["modified_at"].(string) > files[j]["modified_at"].(string)
 		})
-		writeJSON(w, http.StatusOK, map[string]any{"path": defaultBackupPath, "files": files})
+		writeJSON(w, http.StatusOK, map[string]any{"path": h.backupBaseDir, "files": files})
 	case http.MethodDelete:
 		fileName := r.URL.Query().Get("file")
 		if fileName == "" {
 			writeError(w, http.StatusBadRequest, "file name is required")
 			return
 		}
-		resolvedPath, ok := resolveBackupPath(fileName)
+		resolvedPath, ok := h.resolveBackupPath(fileName)
 		if !ok {
 			writeError(w, http.StatusForbidden, "forbidden")
 			return
@@ -337,6 +470,7 @@ func (h *Handlers) LocalBackups(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
+		_ = os.Remove(backup.ManifestPathForArtifact(resolvedPath))
 		writeJSON(w, http.StatusOK, map[string]any{"message": "Backup file deleted successfully"})
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -344,10 +478,6 @@ func (h *Handlers) LocalBackups(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) LocalBackupDownload(w http.ResponseWriter, r *http.Request) {
-	if !isAdminRole(r) {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -357,10 +487,35 @@ func (h *Handlers) LocalBackupDownload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file name is required")
 		return
 	}
-	resolvedPath, ok := resolveBackupPath(fileName)
+	resolvedPath, ok := h.resolveBackupPath(fileName)
 	if !ok {
 		writeError(w, http.StatusForbidden, "forbidden")
 		return
+	}
+	if !isAdminRole(r) {
+		userID, ok := readUserIDFromContext(r)
+		if !ok || userID <= 0 {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		record, err := h.store.GetBackupByPath(resolvedPath)
+		if err != nil || record == nil {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		if record.TargetType != "database" {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		allowed, err := h.store.HasDatabaseAccess(userID, record.TargetID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+		if !allowed {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
 	}
 	info, err := os.Stat(resolvedPath)
 	if err != nil {
@@ -384,16 +539,17 @@ func (h *Handlers) LocalBackupDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 }
 
-func resolveBackupPath(fileName string) (string, bool) {
+func (h *Handlers) resolveBackupPath(fileName string) (string, bool) {
 	cleaned := filepath.Clean(fileName)
 	if cleaned == "." || cleaned == "/" || strings.HasPrefix(cleaned, "..") {
 		return "", false
 	}
 	if filepath.IsAbs(cleaned) {
-		cleaned = strings.TrimPrefix(cleaned, string(filepath.Separator))
+		return "", false
 	}
-	target := filepath.Join(defaultBackupPath, cleaned)
-	if !strings.HasPrefix(target, defaultBackupPath+string(filepath.Separator)) {
+	target := filepath.Join(h.backupBaseDir, cleaned)
+	rel, err := filepath.Rel(h.backupBaseDir, target)
+	if err != nil || strings.HasPrefix(rel, "..") {
 		return "", false
 	}
 	return target, true
@@ -449,6 +605,18 @@ func (h *Handlers) deleteBackup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "missing required parameter: id")
 		return
 	}
+	record, err := h.store.GetBackupByID(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if record == nil {
+		writeError(w, http.StatusNotFound, "backup not found")
+		return
+	}
+	if record.BackupPath != "" {
+		_ = backup.RemoveBackupArtifacts(record.BackupPath)
+	}
 	if err := h.store.DeleteBackup(id); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -461,7 +629,7 @@ func (h *Handlers) cleanupBackups(w http.ResponseWriter, r *http.Request) {
 		DestinationID int64 `json:"destination_id"`
 		RetentionDays int   `json:"retention_days"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -469,10 +637,94 @@ func (h *Handlers) cleanupBackups(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "missing required fields: destination_id, retention_days")
 		return
 	}
-	deleted, err := h.store.DeleteOldBackups(body.DestinationID, body.RetentionDays)
+	cutoff := time.Now().UTC().AddDate(0, 0, -body.RetentionDays).Format("2006-01-02 15:04:05")
+	records, err := h.store.ListOldBackups(body.DestinationID, cutoff)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	var deleted int64
+	for _, record := range records {
+		if record.BackupPath != "" {
+			_ = backup.RemoveBackupArtifacts(record.BackupPath)
+		}
+		if err := h.store.DeleteBackup(record.ID); err == nil {
+			deleted++
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"message": "Old backups cleaned up successfully", "deleted": deleted})
+}
+
+func (h *Handlers) ensureLocalDestination() (*store.BackupDestination, error) {
+	destinations, err := h.store.GetBackupDestinations()
+	if err != nil {
+		return nil, err
+	}
+	for _, dest := range destinations {
+		if dest.Type == "local" {
+			return &dest, nil
+		}
+	}
+	config := map[string]string{"path": h.backupBaseDir}
+	payload, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.store.CreateBackupDestination("Local Server", "local", string(payload), 1)
+	if err != nil {
+		return nil, err
+	}
+	return h.store.GetBackupDestinationByID(id)
+}
+
+func (h *Handlers) listBackupFiles() ([]map[string]any, error) {
+	baseDir := filepath.Clean(h.backupBaseDir)
+	if _, err := os.Stat(baseDir); err != nil {
+		if os.IsNotExist(err) {
+			return []map[string]any{}, nil
+		}
+		return nil, err
+	}
+	var files []map[string]any
+	err := filepath.WalkDir(baseDir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if entry.IsDir() {
+			if entry.Name() == "_tmp" {
+				return filepath.SkipDir
+			}
+			rel, relErr := filepath.Rel(baseDir, path)
+			if relErr != nil {
+				return filepath.SkipDir
+			}
+			depth := strings.Count(rel, string(filepath.Separator))
+			if rel != "." && depth >= 2 {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, relErr := filepath.Rel(baseDir, path)
+		if relErr != nil || strings.HasPrefix(rel, "..") {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		if !strings.HasPrefix(rel, "sites/") && !strings.HasPrefix(rel, "databases/") && !strings.HasPrefix(rel, "downloads/") {
+			return nil
+		}
+		if !strings.HasSuffix(rel, ".tar.gz") && !strings.HasSuffix(rel, ".dump.gz") {
+			return nil
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			return nil
+		}
+		files = append(files, map[string]any{
+			"name":        rel,
+			"size":        info.Size(),
+			"modified_at": info.ModTime().UTC().Format(time.RFC3339),
+		})
+		return nil
+	})
+	return files, err
 }

@@ -55,11 +55,10 @@ export function validateMigration(db: Database.Database): boolean {
   });
 
   // Print results
-  console.log('\n📋 Migration Validation Results:');
+  console.log('\nMigration Validation Results:');
   let allPassed = true;
   for (const check of checks) {
-    const icon = check.passed ? '✅' : '❌';
-    console.log(`${icon} ${check.test}: ${check.details}`);
+    console.log(`${check.test}: ${check.details}`);
     if (!check.passed) allPassed = false;
   }
 

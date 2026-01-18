@@ -122,7 +122,7 @@ func (h *Handlers) TransferFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req transferRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -198,7 +198,7 @@ func (h *Handlers) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req deletePathRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
