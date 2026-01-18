@@ -29,6 +29,25 @@ export default function SidebarPanel({
   const [selectedContent, setSelectedContent] = useState<SidebarContent>(defaultContent);
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  if (isDbEditMode && side === 'left') {
+    return (
+      <div className="relative">
+        <div className="fixed top-20 left-0 h-[calc(100vh-80px)] w-[20vw] bg-gradient-to-b from-purple-900/30 to-cyan-900/30 backdrop-blur-md border-r border-purple-500/20 flex flex-col z-40">
+          <div className="flex-1 overflow-auto p-4">
+            <SchemaBrowser />
+          </div>
+        </div>
+        <div
+          className="fixed left-[20vw] top-20 h-[calc(100vh-80px)] w-0.5 z-40"
+          style={{
+            background: 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)',
+            boxShadow: '0 0 8px rgba(255, 16, 240, 0.6)',
+          }}
+        />
+      </div>
+    );
+  }
+
   const contentOptions: Array<{ value: SidebarContent; label: string }> = [
     { value: 'none', label: 'None' },
     { value: 'stats', label: 'Live Stats' },

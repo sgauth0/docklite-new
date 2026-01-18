@@ -150,16 +150,16 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
                 )}
               </Link>
               <Link
-                href="/dns"
+                href="/network"
                 className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
-                  isActive('/dns')
+                  isActive('/network')
                     ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
                     : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
                 }`}
               >
                 <Globe size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(79, 214, 255, 0.4))' }} />
                 <span>Network</span>
-                {isActive('/dns') && (
+                {isActive('/network') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
                 )}
               </Link>

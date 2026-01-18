@@ -35,6 +35,7 @@ import { useRouter } from 'next/navigation';
 interface DatabaseWithSize extends DatabaseType {
   size: number;
   sizeCategory: 'empty' | 'tiny' | 'small' | 'medium' | 'large' | 'huge';
+  username?: string;
 }
 
 interface DockliteDbInfo {
@@ -166,7 +167,7 @@ export default function DatabasesPage() {
 
   const openEditModal = (db: DatabaseWithSize) => {
     setEditingDb(db);
-    setEditUsername('docklite');
+    setEditUsername(db.username || 'docklite');
     setEditPassword('');
     setError('');
   };
@@ -200,7 +201,7 @@ export default function DatabasesPage() {
 
   const openEditModeModal = (db: DatabaseWithSize) => {
     setEditModeDb(db);
-    setEditModeUsername('docklite');
+    setEditModeUsername(db.username || 'docklite');
     setEditModePassword('');
     setError('');
   };

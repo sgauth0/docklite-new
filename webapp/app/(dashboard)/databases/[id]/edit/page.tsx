@@ -1,21 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Sparkle,
-  CheckCircle,
-  ChartBar,
-  Lightning,
-  ArrowLeft,
-  SpinnerGap,
-  Play,
-} from '@phosphor-icons/react';
+import { Sparkle, CheckCircle, ArrowLeft, SpinnerGap, Play } from '@phosphor-icons/react';
 
 interface ColumnInfo {
   name: string;
   type: string;
   nullable: boolean;
+  default?: string | null;
+  key?: string | null;
+}
+
+interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
 }
 
 interface TableData {
@@ -37,6 +36,30 @@ interface QueryResult {
 }
 
 const STORAGE_PREFIX = 'docklite-db-edit-';
+const TABLE_ROW_LIMIT = 100;
+
+const numericTokens = ['int', 'numeric', 'decimal', 'real', 'double', 'float'];
+
+function isNumericColumn(type: string) {
+  const normalized = type.toLowerCase();
+  return numericTokens.some((token) => normalized.includes(token));
+}
+
+function areValuesEqual(original: any, updated: any) {
+  if (original === null || original === undefined) {
+    return updated === null || updated === undefined || updated === '';
+  }
+  if (updated === null || updated === undefined) {
+    return original === null || original === undefined || original === '';
+  }
+  return String(original) === String(updated);
+}
+
+function formatCellValue(value: any) {
+  if (value === null || value === undefined) return '-';
+  if (value === '') return '""';
+  return String(value);
+}
 
 export default function DatabaseEditPage() {
   const params = useParams();
@@ -46,15 +69,31 @@ export default function DatabaseEditPage() {
 
   const [auth, setAuth] = useState<{ username: string; password: string } | null>(null);
   const [dbInfo, setDbInfo] = useState<DatabaseInfo | null>(null);
+  const [tables, setTables] = useState<TableInfo[]>([]);
+  const [loadingSchema, setLoadingSchema] = useState(false);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const [tableData, setTableData] = useState<TableData | null>(null);
   const [loadingTable, setLoadingTable] = useState(false);
   const [tableError, setTableError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedRows, setEditedRows] = useState<Record<string, any>[]>([]);
+  const [savingRows, setSavingRows] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [sql, setSql] = useState('SELECT * FROM users LIMIT 10;');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [runningQuery, setRunningQuery] = useState(false);
-  const [activeTab, setActiveTab] = useState<'table' | 'sql'>('table');
+  const [activeTab, setActiveTab] = useState<'rows' | 'query' | 'structure'>('rows');
+
+  const handleInvalidCredentials = useCallback(() => {
+    if (dbId) {
+      sessionStorage.removeItem(`${STORAGE_PREFIX}${dbId}`);
+    }
+    router.push('/databases');
+  }, [dbId, router]);
 
   useEffect(() => {
     if (!dbId) return;
@@ -77,43 +116,100 @@ export default function DatabaseEditPage() {
   }, [dbId]);
 
   useEffect(() => {
-    const handleSelect = (event: Event) => {
-      const detail = (event as CustomEvent<{ table: string }>).detail;
-      if (detail?.table) {
-        setSelectedTable(detail.table);
+    if (!dbId || !auth) return;
+    const fetchSchema = async () => {
+      try {
+        setLoadingSchema(true);
+        setSchemaError(null);
+        const res = await fetch(`/api/databases/${dbId}/schema`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(auth),
+        });
+        if (res.status === 401) {
+          handleInvalidCredentials();
+          return;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to load schema');
+        }
+        const data = await res.json();
+        setTables(data.tables || []);
+      } catch (err: any) {
+        setSchemaError(err.message || 'Failed to load schema');
+      } finally {
+        setLoadingSchema(false);
       }
     };
-    window.addEventListener('docklite-db-select', handleSelect);
-    return () => window.removeEventListener('docklite-db-select', handleSelect);
-  }, []);
+    fetchSchema();
+  }, [dbId, auth]);
 
-  useEffect(() => {
-    if (!dbId || !auth || !selectedTable) return;
-
-    const fetchTable = async () => {
+  const loadTableData = useCallback(
+    async (tableName: string) => {
+      if (!dbId || !auth || !tableName) return;
       try {
         setLoadingTable(true);
         setTableError(null);
+        setSaveError(null);
         const res = await fetch(`/api/databases/${dbId}/table`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...auth, table: selectedTable }),
+          body: JSON.stringify({ ...auth, table: tableName }),
         });
+        if (res.status === 401) {
+          handleInvalidCredentials();
+          return;
+        }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || 'Failed to load table');
         }
         const data = await res.json();
         setTableData(data);
+        setIsEditMode(false);
+        setEditedRows([]);
       } catch (err: any) {
         setTableError(err.message || 'Failed to load table');
       } finally {
         setLoadingTable(false);
       }
-    };
+    },
+    [dbId, auth]
+  );
 
-    fetchTable();
-  }, [dbId, auth, selectedTable]);
+  useEffect(() => {
+    const handleTableSelect = (event: Event) => {
+      const detail = (event as CustomEvent<{ table: string }>).detail;
+      if (detail?.table) {
+        setSelectedTable(detail.table);
+        setSelectedColumn(null);
+        setSaveError(null);
+        setSaveSuccess(null);
+      }
+    };
+    window.addEventListener('docklite-db-select-table', handleTableSelect);
+    return () => window.removeEventListener('docklite-db-select-table', handleTableSelect);
+  }, []);
+
+  useEffect(() => {
+    const handleColumnSelect = (event: Event) => {
+      const detail = (event as CustomEvent<{ table: string; column: string }>).detail;
+      if (detail?.table) {
+        setSelectedTable(detail.table);
+        setSelectedColumn(detail.column || null);
+        setSaveError(null);
+        setSaveSuccess(null);
+      }
+    };
+    window.addEventListener('docklite-db-select-column', handleColumnSelect);
+    return () => window.removeEventListener('docklite-db-select-column', handleColumnSelect);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTable) return;
+    loadTableData(selectedTable);
+  }, [selectedTable, loadTableData]);
 
   const handleRunQuery = async () => {
     if (!dbId || !auth || !sql.trim()) return;
@@ -126,6 +222,10 @@ export default function DatabaseEditPage() {
         body: JSON.stringify({ ...auth, sql }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleInvalidCredentials();
+        return;
+      }
       if (!res.ok) {
         throw new Error(data.error || 'Query failed');
       }
@@ -137,10 +237,114 @@ export default function DatabaseEditPage() {
     }
   };
 
+  const handleEnableEdit = () => {
+    if (!tableData) return;
+    setEditedRows(tableData.rows.map((row) => ({ ...row })));
+    setIsEditMode(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const handleCellEdit = (rowIndex: number, columnName: string, columnType: string, rawValue: string) => {
+    const updatedRows = [...editedRows];
+    const normalizedValue = isNumericColumn(columnType)
+      ? rawValue === ''
+        ? null
+        : Number.isNaN(Number(rawValue))
+          ? rawValue
+          : Number(rawValue)
+      : rawValue;
+    updatedRows[rowIndex] = {
+      ...updatedRows[rowIndex],
+      [columnName]: normalizedValue,
+    };
+    setEditedRows(updatedRows);
+  };
+
+  const handleCancel = async () => {
+    setIsEditMode(false);
+    setEditedRows([]);
+    setSaveError(null);
+    setSaveSuccess(null);
+    if (selectedTable) {
+      await loadTableData(selectedTable);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!dbId || !auth || !selectedTable || !tableData) return;
+    if (!tableData.columns.some((column) => column.name === 'id')) {
+      setSaveError('Edit mode requires an id column to save changes.');
+      return;
+    }
+
+    const changedRows: Record<string, any>[] = [];
+    tableData.rows.forEach((originalRow, rowIndex) => {
+      const editedRow = editedRows[rowIndex];
+      if (!editedRow) return;
+      const changes: Record<string, any> = {};
+      tableData.columns.forEach((column) => {
+        const originalValue = originalRow[column.name];
+        const updatedValue = editedRow[column.name];
+        if (!areValuesEqual(originalValue, updatedValue)) {
+          changes[column.name] = updatedValue;
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        changes.id = editedRow.id ?? originalRow.id;
+        changedRows.push(changes);
+      }
+    });
+
+    if (changedRows.length === 0) {
+      setSaveError('No changes to save.');
+      return;
+    }
+
+    if (changedRows.some((row) => row.id === undefined || row.id === null || row.id === '')) {
+      setSaveError('Missing id values for one or more edited rows.');
+      return;
+    }
+
+    try {
+      setSavingRows(true);
+      setSaveError(null);
+      const res = await fetch(`/api/databases/${dbId}/update-rows`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...auth,
+          table: selectedTable,
+          rows: changedRows,
+        }),
+      });
+      if (res.status === 401) {
+        handleInvalidCredentials();
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save');
+      }
+      setSaveSuccess('Changes saved.');
+      setIsEditMode(false);
+      setEditedRows([]);
+      await loadTableData(selectedTable);
+    } catch (err: any) {
+      setSaveError(err.message || 'Save failed');
+    } finally {
+      setSavingRows(false);
+    }
+  };
+
+  const structureColumns = tables.find((table) => table.name === selectedTable)?.columns || [];
+
   if (!dbId) {
     return (
       <div className="card-vapor p-8 max-w-xl">
-        <h1 className="text-xl font-bold" style={{ color: '#ff6b6b' }}>Missing database ID</h1>
+        <h1 className="text-xl font-bold" style={{ color: '#ff6b6b' }}>
+          Missing database ID
+        </h1>
       </div>
     );
   }
@@ -213,47 +417,124 @@ export default function DatabaseEditPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => setActiveTab('table')}
+            onClick={() => setActiveTab('rows')}
             className="px-4 py-2 rounded-lg text-sm font-bold transition-all"
             style={{
-              background: activeTab === 'table'
+              background: activeTab === 'rows'
                 ? 'linear-gradient(135deg, var(--neon-pink) 0%, var(--neon-purple) 100%)'
                 : 'rgba(255, 255, 255, 0.05)',
-              color: activeTab === 'table' ? 'white' : 'var(--text-secondary)',
-              border: activeTab === 'table' ? '2px solid var(--neon-pink)' : '2px solid transparent',
+              color: activeTab === 'rows' ? 'white' : 'var(--text-secondary)',
+              border: activeTab === 'rows' ? '2px solid var(--neon-pink)' : '2px solid transparent',
+              boxShadow: activeTab === 'rows' ? '0 0 12px rgba(255, 16, 240, 0.4)' : 'none',
             }}
           >
-            <span className="inline-flex items-center gap-2">
-              <ChartBar size={14} weight="duotone" />
-              Table View
-            </span>
+            📊 Rows
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('sql')}
+            onClick={() => setActiveTab('query')}
             className="px-4 py-2 rounded-lg text-sm font-bold transition-all"
             style={{
-              background: activeTab === 'sql'
+              background: activeTab === 'query'
                 ? 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-green) 100%)'
                 : 'rgba(255, 255, 255, 0.05)',
-              color: activeTab === 'sql' ? 'white' : 'var(--text-secondary)',
-              border: activeTab === 'sql' ? '2px solid var(--neon-cyan)' : '2px solid transparent',
+              color: activeTab === 'query' ? 'white' : 'var(--text-secondary)',
+              border: activeTab === 'query' ? '2px solid var(--neon-cyan)' : '2px solid transparent',
+              boxShadow: activeTab === 'query' ? '0 0 12px rgba(0, 255, 255, 0.3)' : 'none',
             }}
           >
-            <span className="inline-flex items-center gap-2">
-              <Lightning size={14} weight="duotone" />
-              Run SQL
-            </span>
+            ⚡ Query
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('structure')}
+            className="px-4 py-2 rounded-lg text-sm font-bold transition-all"
+            style={{
+              background: activeTab === 'structure'
+                ? 'linear-gradient(135deg, #5f8bff 0%, var(--neon-purple) 100%)'
+                : 'rgba(255, 255, 255, 0.05)',
+              color: activeTab === 'structure' ? 'white' : 'var(--text-secondary)',
+              border: activeTab === 'structure' ? '2px solid #5f8bff' : '2px solid transparent',
+              boxShadow: activeTab === 'structure' ? '0 0 12px rgba(95, 139, 255, 0.35)' : 'none',
+            }}
+          >
+            🏗️ Structure
           </button>
         </div>
       </div>
 
-      {activeTab === 'table' && (
-        <div className="card-vapor p-6 rounded-xl border border-purple-500/20">
-          <h2 className="text-xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
-            <ChartBar size={16} weight="duotone" />
-            Table View {selectedTable ? `• ${selectedTable}` : ''}
-          </h2>
+      {activeTab === 'rows' && (
+        <div className="card-vapor p-6 rounded-xl border border-purple-500/20 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                📋 {selectedTable || 'Rows'}
+              </h2>
+              {tableData && (
+                <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                  {tableData.rows.length} rows
+                  {tableData.rows.length >= TABLE_ROW_LIMIT ? ` (showing first ${TABLE_ROW_LIMIT})` : ''}
+                </p>
+              )}
+            </div>
+            {selectedTable && !isEditMode && (
+              <button
+                type="button"
+                onClick={handleEnableEdit}
+                className="px-4 py-2 text-sm font-bold rounded-lg transition-all animate-pulse"
+                style={{
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ff1744 100%)',
+                  border: '3px solid #ff1744',
+                  color: 'white',
+                  boxShadow: '0 0 16px rgba(255, 23, 68, 0.55)',
+                }}
+              >
+                🔓 Enable Edit Mode
+              </button>
+            )}
+            {selectedTable && isEditMode && (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={savingRows}
+                  className="px-4 py-2 text-sm font-bold rounded-lg transition-all disabled:opacity-50"
+                  style={{
+                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ff1744 100%)',
+                    border: '2px solid #ff1744',
+                    color: 'white',
+                  }}
+                >
+                  💾 {savingRows ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-bold rounded-lg transition-all"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '2px solid rgba(255, 255, 255, 0.15)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  ❌ Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-bold rounded-lg transition-all"
+                  style={{
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                    border: '2px solid #45a049',
+                    color: 'white',
+                  }}
+                >
+                  ✓ Back to View
+                </button>
+              </div>
+            )}
+          </div>
+
           {loadingTable && (
             <div className="text-sm font-mono flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
               <SpinnerGap size={14} weight="duotone" className="animate-spin" />
@@ -265,6 +546,17 @@ export default function DatabaseEditPage() {
               {tableError}
             </div>
           )}
+          {saveError && (
+            <div className="text-sm font-mono" style={{ color: '#ff6b6b' }}>
+              {saveError}
+            </div>
+          )}
+          {saveSuccess && (
+            <div className="text-sm font-mono" style={{ color: 'var(--neon-green)' }}>
+              {saveSuccess}
+            </div>
+          )}
+
           {!loadingTable && !tableError && tableData && (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-3">
@@ -287,15 +579,21 @@ export default function DatabaseEditPage() {
                 <table className="w-full text-xs font-mono">
                   <thead>
                     <tr>
-                      {tableData.columns.map((col) => (
-                        <th
-                          key={col.name}
-                          className="px-3 py-2 text-left"
-                          style={{ color: 'var(--neon-purple)' }}
-                        >
-                          {col.name}
-                        </th>
-                      ))}
+                      {tableData.columns.map((col) => {
+                        const isHighlighted = selectedColumn === col.name;
+                        return (
+                          <th
+                            key={col.name}
+                            className="px-3 py-2 text-left"
+                            style={{
+                              color: 'var(--neon-purple)',
+                              background: isHighlighted ? 'rgba(0, 255, 255, 0.15)' : 'transparent',
+                            }}
+                          >
+                            {col.name}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
@@ -306,17 +604,44 @@ export default function DatabaseEditPage() {
                           className="px-3 py-4 text-center opacity-60"
                           style={{ color: 'var(--text-secondary)' }}
                         >
-                          No rows found.
+                          No rows found in this table.
                         </td>
                       </tr>
                     ) : (
-                      tableData.rows.map((row, idx) => (
-                        <tr key={idx} className="border-t border-purple-500/10">
-                          {tableData.columns.map((col) => (
-                            <td key={col.name} className="px-3 py-2">
-                              {row[col.name] === null || row[col.name] === undefined ? '-' : String(row[col.name])}
-                            </td>
-                          ))}
+                      (isEditMode ? editedRows : tableData.rows).map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border-t border-purple-500/10">
+                          {tableData.columns.map((col) => {
+                            const isHighlighted = selectedColumn === col.name;
+                            const isModified = isEditMode && !areValuesEqual(tableData.rows[rowIndex]?.[col.name], row[col.name]);
+                            const cellStyle = isModified
+                              ? {
+                                  background: 'rgba(255, 200, 0, 0.18)',
+                                  boxShadow: 'inset 0 0 0 1px rgba(255, 200, 0, 0.35)',
+                                }
+                              : isHighlighted
+                                ? { background: 'rgba(0, 255, 255, 0.12)' }
+                                : {};
+
+                            return (
+                              <td key={col.name} className="px-3 py-2" style={cellStyle}>
+                                {isEditMode ? (
+                                  <input
+                                    type={isNumericColumn(col.type) ? 'number' : 'text'}
+                                    value={row[col.name] === null || row[col.name] === undefined ? '' : String(row[col.name])}
+                                    onChange={(e) => handleCellEdit(rowIndex, col.name, col.type, e.target.value)}
+                                    className="w-full px-2 py-1 text-xs rounded-md"
+                                    style={{
+                                      background: 'rgba(15, 5, 30, 0.7)',
+                                      border: '1px solid rgba(181, 55, 242, 0.4)',
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  />
+                                ) : (
+                                  formatCellValue(row[col.name])
+                                )}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))
                     )}
@@ -333,14 +658,13 @@ export default function DatabaseEditPage() {
         </div>
       )}
 
-      {activeTab === 'sql' && (
-        <div className="card-vapor p-6 rounded-xl border border-purple-500/20">
-          <h2 className="text-xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
-            <Lightning size={16} weight="duotone" />
-            Run SQL
-          </h2>
+      {activeTab === 'query' && (
+        <div className="card-vapor p-6 rounded-xl border border-purple-500/20 space-y-4">
+          <div className="text-xl font-bold" style={{ color: 'var(--neon-green)' }}>
+            ⚡ Query Editor
+          </div>
           <textarea
-            className="w-full h-40 p-3 rounded-lg text-xs font-mono mb-3"
+            className="w-full min-h-[200px] p-3 rounded-lg text-xs font-mono"
             style={{
               background: 'rgba(15, 5, 30, 0.7)',
               border: '2px solid var(--neon-purple)',
@@ -369,49 +693,54 @@ export default function DatabaseEditPage() {
           </button>
 
           {queryError && (
-            <div className="mt-3 text-xs font-mono" style={{ color: '#ff6b6b' }}>
+            <div className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
               {queryError}
             </div>
           )}
 
           {queryResult && (
-            <div className="mt-4 space-y-3 text-xs font-mono">
+            <div className="space-y-2 text-xs font-mono">
               {queryResult.type === 'select' && queryResult.rows ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr>
-                        {queryResult.columns?.map((col) => (
-                          <th key={col} className="px-2 py-1 text-left" style={{ color: 'var(--neon-cyan)' }}>
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queryResult.rows.length === 0 ? (
+                <div>
+                  <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    ⚡ Query Results ({queryResult.rows.length} rows)
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
                         <tr>
-                          <td
-                            colSpan={queryResult.columns?.length || 1}
-                            className="px-2 py-2 opacity-60"
-                            style={{ color: 'var(--text-secondary)' }}
-                          >
-                            Query returned no rows.
-                          </td>
+                          {queryResult.columns?.map((col) => (
+                            <th key={col} className="px-2 py-1 text-left" style={{ color: 'var(--neon-cyan)' }}>
+                              {col}
+                            </th>
+                          ))}
                         </tr>
-                      ) : (
-                        queryResult.rows.map((row, idx) => (
-                          <tr key={idx} className="border-t border-purple-500/10">
-                            {queryResult.columns?.map((col) => (
-                              <td key={col} className="px-2 py-1">
-                                {row[col] === null || row[col] === undefined ? '-' : String(row[col])}
-                              </td>
-                            ))}
+                      </thead>
+                      <tbody>
+                        {queryResult.rows.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={queryResult.columns?.length || 1}
+                              className="px-2 py-2 opacity-60"
+                              style={{ color: 'var(--text-secondary)' }}
+                            >
+                              Query returned no rows.
+                            </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          queryResult.rows.map((row, idx) => (
+                            <tr key={idx} className="border-t border-purple-500/10">
+                              {queryResult.columns?.map((col) => (
+                                <td key={col} className="px-2 py-1">
+                                  {formatCellValue(row[col])}
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : (
                 <div className="p-3 rounded-lg border border-purple-500/30 bg-black/30">
@@ -420,6 +749,89 @@ export default function DatabaseEditPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'structure' && (
+        <div className="card-vapor p-6 rounded-xl border border-purple-500/20 space-y-4">
+          <div className="text-xl font-bold" style={{ color: 'var(--neon-cyan)' }}>
+            🏗️ Table Structure {selectedTable ? `: ${selectedTable}` : ''}
+          </div>
+
+          {loadingSchema && (
+            <div className="text-xs font-mono" style={{ color: 'var(--neon-cyan)' }}>
+              Loading schema...
+            </div>
+          )}
+
+          {schemaError && (
+            <div className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
+              {schemaError}
+            </div>
+          )}
+
+          {!loadingSchema && !schemaError && !selectedTable && (
+            <div className="text-sm font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
+              Select a table from the schema browser.
+            </div>
+          )}
+
+          {!loadingSchema && !schemaError && selectedTable && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-left" style={{ color: 'var(--neon-purple)' }}>
+                      Column
+                    </th>
+                    <th className="px-3 py-2 text-left" style={{ color: 'var(--neon-purple)' }}>
+                      Type
+                    </th>
+                    <th className="px-3 py-2 text-left" style={{ color: 'var(--neon-purple)' }}>
+                      Nullable
+                    </th>
+                    <th className="px-3 py-2 text-left" style={{ color: 'var(--neon-purple)' }}>
+                      Default
+                    </th>
+                    <th className="px-3 py-2 text-left" style={{ color: 'var(--neon-purple)' }}>
+                      Key
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {structureColumns.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-3 py-4 text-center opacity-60"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        No column data available.
+                      </td>
+                    </tr>
+                  ) : (
+                    structureColumns.map((column) => (
+                      <tr key={column.name} className="border-t border-purple-500/10">
+                        <td className="px-3 py-2" style={{ color: 'var(--neon-cyan)' }}>
+                          {column.name}
+                        </td>
+                        <td className="px-3 py-2">{column.type}</td>
+                        <td className="px-3 py-2">{column.nullable ? 'YES' : 'NO'}</td>
+                        <td className="px-3 py-2">
+                          {column.default === null || column.default === undefined || column.default === ''
+                            ? '-'
+                            : String(column.default)}
+                        </td>
+                        <td className="px-3 py-2" style={{ color: 'var(--neon-purple)' }}>
+                          {column.key || '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

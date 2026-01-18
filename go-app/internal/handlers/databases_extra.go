@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,8 +30,16 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
+	dockerUsers := make(map[string]string)
+	dockerPasswords := make(map[string]string)
 	if dockerDatabases, err := h.docker.ListDatabases(ctx); err == nil {
 		for _, db := range dockerDatabases {
+			if db.ID != "" && db.Username != "" {
+				dockerUsers[db.ID] = db.Username
+			}
+			if db.ID != "" && db.Password != "" {
+				dockerPasswords[db.ID] = db.Password
+			}
 			_, _ = h.store.UpsertDatabase(db.Name, db.ID, db.Port)
 		}
 	}
@@ -74,27 +83,31 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		if database.ContainerID != "" {
 			query := fmt.Sprintf("SELECT pg_database_size('%s')", database.Name)
 			dockerCtx, dockerCancel := dockerContext(r.Context())
-			output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "docklite", database.Name, "", query, false)
-			dockerCancel()
-			if err == nil {
-				if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(output), 10, 64); parseErr == nil {
-					size = parsed
-					switch {
-					case size == 0:
-						sizeCategory = "empty"
-					case size < 1024*1024:
-						sizeCategory = "tiny"
-					case size < 10*1024*1024:
-						sizeCategory = "small"
-					case size < 100*1024*1024:
-						sizeCategory = "medium"
-					case size < 1024*1024*1024:
-						sizeCategory = "large"
-					default:
-						sizeCategory = "huge"
+			dbUser := dockerUsers[database.ContainerID]
+			dbPassword := dockerPasswords[database.ContainerID]
+			if dbUser != "" && dbPassword != "" {
+				output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, dbUser, database.Name, dbPassword, query, false)
+				if err == nil {
+					if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(output), 10, 64); parseErr == nil {
+						size = parsed
+						switch {
+						case size == 0:
+							sizeCategory = "empty"
+						case size < 1024*1024:
+							sizeCategory = "tiny"
+						case size < 10*1024*1024:
+							sizeCategory = "small"
+						case size < 100*1024*1024:
+							sizeCategory = "medium"
+						case size < 1024*1024*1024:
+							sizeCategory = "large"
+						default:
+							sizeCategory = "huge"
+						}
 					}
 				}
 			}
+			dockerCancel()
 		}
 
 		withSize = append(withSize, map[string]any{
@@ -105,6 +118,7 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 			"created_at":    database.CreatedAt,
 			"size":          size,
 			"sizeCategory":  sizeCategory,
+			"username":      dockerUsers[database.ContainerID],
 		})
 	}
 
@@ -144,6 +158,8 @@ func (h *Handlers) DatabaseRoutes(w http.ResponseWriter, r *http.Request) {
 		h.DatabaseSchema(w, r, dbID)
 	case "table":
 		h.DatabaseTable(w, r, dbID)
+	case "update-rows":
+		h.DatabaseUpdateRows(w, r, dbID)
 	case "download":
 		h.DatabaseDownload(w, r, dbID)
 	default:
@@ -244,15 +260,40 @@ func (h *Handlers) updateDatabaseCredentials(w http.ResponseWriter, r *http.Requ
 	dockerCtx, dockerCancel := dockerContext(r.Context())
 	defer dockerCancel()
 
-	alterSQL := fmt.Sprintf("ALTER USER %s WITH PASSWORD '%s';", body.Username, body.Password)
-	if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", alterSQL, false); err != nil {
-		createSQL := fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s';", body.Username, body.Password)
-		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", createSQL, false); err != nil {
+	adminUser := body.Username
+	adminPassword := ""
+	inspect, err := h.docker.InspectContainer(dockerCtx, database.ContainerID)
+	if err != nil {
+		log.Printf("update credentials failed to inspect container %s: %v", database.ContainerID, err)
+	} else if inspect.Config != nil {
+		if labelUser := inspect.Config.Labels["docklite.username"]; labelUser != "" {
+			adminUser = labelUser
+		}
+		if labelPassword := inspect.Config.Labels["docklite.password"]; labelPassword != "" {
+			adminPassword = labelPassword
+		}
+	}
+
+	passwordSQL, err := formatSQLValue(body.Password)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid password")
+		return
+	}
+	usernameSQL := quoteIdent(body.Username)
+	databaseSQL := quoteIdent(database.Name)
+
+	alterSQL := fmt.Sprintf("ALTER USER %s WITH PASSWORD %s;", usernameSQL, passwordSQL)
+	if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, adminUser, database.Name, adminPassword, alterSQL, false); err != nil {
+		log.Printf("update credentials failed to alter user %s: %v", body.Username, err)
+		createSQL := fmt.Sprintf("CREATE USER %s WITH PASSWORD %s;", usernameSQL, passwordSQL)
+		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, adminUser, database.Name, adminPassword, createSQL, false); err != nil {
+			log.Printf("update credentials failed to create user %s: %v", body.Username, err)
 			writeError(w, http.StatusInternalServerError, "failed to update credentials")
 			return
 		}
-		grantSQL := fmt.Sprintf("GRANT ALL PRIVILEGES ON DATABASE %s TO %s;", database.Name, body.Username)
-		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, "postgres", "postgres", "", grantSQL, false); err != nil {
+		grantSQL := fmt.Sprintf("GRANT ALL PRIVILEGES ON DATABASE %s TO %s;", databaseSQL, usernameSQL)
+		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, adminUser, database.Name, adminPassword, grantSQL, false); err != nil {
+			log.Printf("update credentials failed to grant privileges for %s: %v", body.Username, err)
 			writeError(w, http.StatusInternalServerError, "failed to grant privileges")
 			return
 		}
@@ -307,6 +348,10 @@ func (h *Handlers) DatabaseQuery(w http.ResponseWriter, r *http.Request, databas
 		wrapped := fmt.Sprintf("SELECT coalesce(json_agg(t), '[]'::json) FROM (%s) t;", normalized)
 		rowsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, wrapped, true)
 		if err != nil {
+			if isAuthError(err) {
+				writeError(w, http.StatusUnauthorized, "invalid database credentials")
+				return
+			}
 			writeError(w, http.StatusInternalServerError, "failed to execute query")
 			return
 		}
@@ -329,6 +374,10 @@ func (h *Handlers) DatabaseQuery(w http.ResponseWriter, r *http.Request, databas
 
 	output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, normalized, false)
 	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to execute query")
 		return
 	}
@@ -384,10 +433,25 @@ func (h *Handlers) DatabaseSchema(w http.ResponseWriter, r *http.Request, databa
 	columnsSQL := `
     SELECT coalesce(json_agg(t), '[]'::json)
     FROM (
-      SELECT table_name, column_name, data_type, is_nullable
+      SELECT table_name, column_name, data_type, is_nullable, column_default
       FROM information_schema.columns
       WHERE table_schema = 'public'
       ORDER BY table_name, ordinal_position
+    ) t;
+  `
+
+	keysSQL := `
+    SELECT coalesce(json_agg(t), '[]'::json)
+    FROM (
+      SELECT kcu.table_name, kcu.column_name, tc.constraint_type
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+        AND tc.table_name = kcu.table_name
+      WHERE tc.table_schema = 'public'
+        AND tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY')
+      ORDER BY kcu.table_name, kcu.ordinal_position
     ) t;
   `
 
@@ -396,25 +460,69 @@ func (h *Handlers) DatabaseSchema(w http.ResponseWriter, r *http.Request, databa
 
 	tablesJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, tablesSQL, true)
 	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to fetch schema")
 		return
 	}
 	columnsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
 	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to fetch schema")
+		return
+	}
+	keysJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, keysSQL, true)
+	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to fetch schema")
 		return
 	}
 
 	var tables []map[string]any
 	var columns []map[string]any
+	var keys []map[string]any
 	if tablesJSON == "" {
 		tablesJSON = "[]"
 	}
 	if columnsJSON == "" {
 		columnsJSON = "[]"
 	}
+	if keysJSON == "" {
+		keysJSON = "[]"
+	}
 	_ = json.Unmarshal([]byte(tablesJSON), &tables)
 	_ = json.Unmarshal([]byte(columnsJSON), &columns)
+	_ = json.Unmarshal([]byte(keysJSON), &keys)
+
+	keysByColumn := make(map[string][]string)
+	for _, key := range keys {
+		tableName, _ := key["table_name"].(string)
+		columnName, _ := key["column_name"].(string)
+		keyType, _ := key["constraint_type"].(string)
+		if tableName == "" || columnName == "" || keyType == "" {
+			continue
+		}
+		keyID := tableName + "." + columnName
+		existing := keysByColumn[keyID]
+		alreadyAdded := false
+		for _, item := range existing {
+			if item == keyType {
+				alreadyAdded = true
+				break
+			}
+		}
+		if !alreadyAdded {
+			keysByColumn[keyID] = append(existing, keyType)
+		}
+	}
 
 	columnsByTable := make(map[string][]map[string]any)
 	for _, col := range columns {
@@ -434,10 +542,17 @@ func (h *Handlers) DatabaseSchema(w http.ResponseWriter, r *http.Request, databa
 			if nullableRaw, ok := col["is_nullable"].(string); ok && nullableRaw == "YES" {
 				nullable = true
 			}
+			keyID := tableName + "." + name
+			keyType := ""
+			if keyValues := keysByColumn[keyID]; len(keyValues) > 0 {
+				keyType = strings.Join(keyValues, ", ")
+			}
 			formatted = append(formatted, map[string]any{
 				"name":     name,
 				"type":     colType,
 				"nullable": nullable,
+				"default":  col["column_default"],
+				"key":      keyType,
 			})
 		}
 		responseTables = append(responseTables, map[string]any{
@@ -500,7 +615,7 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
 	rowsSQL := fmt.Sprintf(`
     SELECT coalesce(json_agg(t), '[]'::json)
     FROM (
-      SELECT * FROM "%s" LIMIT 10
+      SELECT * FROM "%s" LIMIT 100
     ) t;
   `, body.Table)
 
@@ -509,11 +624,19 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
 
 	columnsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, columnsSQL, true)
 	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to fetch table data")
 		return
 	}
 	rowsJSON, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, rowsSQL, true)
 	if err != nil {
+		if isAuthError(err) {
+			writeError(w, http.StatusUnauthorized, "invalid database credentials")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to fetch table data")
 		return
 	}
@@ -548,6 +671,107 @@ func (h *Handlers) DatabaseTable(w http.ResponseWriter, r *http.Request, databas
 		"columns": formattedColumns,
 		"rows":    rows,
 	})
+}
+
+func (h *Handlers) DatabaseUpdateRows(w http.ResponseWriter, r *http.Request, databaseID int64) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !isAdminRole(r) {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var body struct {
+		Username string           `json:"username"`
+		Password string           `json:"password"`
+		Table    string           `json:"table"`
+		Rows     []map[string]any `json:"rows"`
+	}
+	if err := readJSON(w, r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Username == "" || body.Password == "" || body.Table == "" {
+		writeError(w, http.StatusBadRequest, "username, password, and table are required")
+		return
+	}
+	if !identifierPattern.MatchString(body.Table) {
+		writeError(w, http.StatusBadRequest, "invalid table name")
+		return
+	}
+	if len(body.Rows) == 0 {
+		writeJSON(w, http.StatusOK, map[string]any{"success": true})
+		return
+	}
+
+	database, err := h.store.GetDatabaseByID(databaseID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if database == nil || database.ContainerID == "" {
+		writeError(w, http.StatusNotFound, "database not found")
+		return
+	}
+
+	dockerCtx, dockerCancel := dockerContext(r.Context())
+	defer dockerCancel()
+
+	for _, row := range body.Rows {
+		rowID, ok := row["id"]
+		if !ok {
+			writeError(w, http.StatusBadRequest, "each row must include an id field")
+			return
+		}
+
+		idValue, err := formatSQLValue(rowID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid row id")
+			return
+		}
+
+		setClauses := make([]string, 0)
+		for column, value := range row {
+			if column == "id" {
+				continue
+			}
+			if !identifierPattern.MatchString(column) {
+				writeError(w, http.StatusBadRequest, "invalid column name")
+				return
+			}
+			valueSQL, err := formatSQLValue(value)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid column value")
+				return
+			}
+			setClauses = append(setClauses, fmt.Sprintf("%s = %s", quoteIdent(column), valueSQL))
+		}
+
+		if len(setClauses) == 0 {
+			continue
+		}
+
+		updateSQL := fmt.Sprintf(
+			"UPDATE %s SET %s WHERE %s = %s;",
+			quoteIdent(body.Table),
+			strings.Join(setClauses, ", "),
+			quoteIdent("id"),
+			idValue,
+		)
+
+		if _, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, body.Username, database.Name, body.Password, updateSQL, false); err != nil {
+			if isAuthError(err) {
+				writeError(w, http.StatusUnauthorized, "invalid database credentials")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to update rows")
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
 }
 
 func (h *Handlers) DatabaseDownload(w http.ResponseWriter, r *http.Request, databaseID int64) {
@@ -705,4 +929,83 @@ func columnsFromRows(rows []map[string]any) []string {
 	}
 	sort.Strings(columns)
 	return columns
+}
+
+func isAuthError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	if strings.Contains(message, "password authentication failed") {
+		return true
+	}
+	if strings.Contains(message, "no password supplied") {
+		return true
+	}
+	if strings.Contains(message, "authentication failed") {
+		return true
+	}
+	if strings.Contains(message, "role") && strings.Contains(message, "does not exist") {
+		return true
+	}
+	return false
+}
+
+func formatSQLValue(value any) (string, error) {
+	switch typed := value.(type) {
+	case nil:
+		return "NULL", nil
+	case string:
+		escaped := strings.ReplaceAll(typed, "'", "''")
+		return "'" + escaped + "'", nil
+	case bool:
+		if typed {
+			return "TRUE", nil
+		}
+		return "FALSE", nil
+	case float64:
+		if math.IsNaN(typed) || math.IsInf(typed, 0) {
+			return "", fmt.Errorf("invalid number")
+		}
+		if typed == math.Trunc(typed) {
+			return strconv.FormatInt(int64(typed), 10), nil
+		}
+		return strconv.FormatFloat(typed, 'f', -1, 64), nil
+	case float32:
+		value64 := float64(typed)
+		if math.IsNaN(value64) || math.IsInf(value64, 0) {
+			return "", fmt.Errorf("invalid number")
+		}
+		if value64 == math.Trunc(value64) {
+			return strconv.FormatInt(int64(value64), 10), nil
+		}
+		return strconv.FormatFloat(value64, 'f', -1, 64), nil
+	case int:
+		return strconv.Itoa(typed), nil
+	case int64:
+		return strconv.FormatInt(typed, 10), nil
+	case int32:
+		return strconv.FormatInt(int64(typed), 10), nil
+	case int16:
+		return strconv.FormatInt(int64(typed), 10), nil
+	case int8:
+		return strconv.FormatInt(int64(typed), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(typed), 10), nil
+	case uint64:
+		return strconv.FormatUint(typed, 10), nil
+	case uint32:
+		return strconv.FormatUint(uint64(typed), 10), nil
+	case uint16:
+		return strconv.FormatUint(uint64(typed), 10), nil
+	case uint8:
+		return strconv.FormatUint(uint64(typed), 10), nil
+	default:
+		serialized, err := json.Marshal(typed)
+		if err != nil {
+			return "", err
+		}
+		escaped := strings.ReplaceAll(string(serialized), "'", "''")
+		return "'" + escaped + "'", nil
+	}
 }
