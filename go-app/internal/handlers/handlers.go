@@ -2,13 +2,24 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 )
 
-func readJSON(r *http.Request, dest any) error {
+const maxJSONBodyBytes = 10 << 20
+
+func readJSON(w http.ResponseWriter, r *http.Request, dest any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	return decoder.Decode(dest)
+	if err := decoder.Decode(dest); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return errors.New("invalid request body")
+	}
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

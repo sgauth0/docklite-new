@@ -20,7 +20,7 @@ export function up(db: Database.Database): void {
 
   if (count.count > 0) {
     console.warn(
-      `⚠️  WARNING: Sessions table has ${count.count} records. Session storage uses iron-session cookies instead.`
+      `WARNING: Sessions table has ${count.count} records. Session storage uses iron-session cookies instead.`
     );
   }
 

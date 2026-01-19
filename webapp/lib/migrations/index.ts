@@ -69,7 +69,7 @@ function createBackup(dbPath: string): void {
 }
 
 export function runMigrations(db: Database.Database, dbPath?: string): void {
-  console.log('🔄 Starting database migrations...');
+  console.log('Starting database migrations...');
 
   ensureMigrationsTable(db);
   const applied = getAppliedMigrations(db);
@@ -83,11 +83,11 @@ export function runMigrations(db: Database.Database, dbPath?: string): void {
 
   for (const migration of allMigrations) {
     if (applied.has(migration.version)) {
-      console.log(`⏭️  Skipping ${migration.version}_${migration.name} (already applied)`);
+      console.log(`Skipping ${migration.version}_${migration.name} (already applied)`);
       continue;
     }
 
-    console.log(`▶️  Running ${migration.version}_${migration.name}...`);
+    console.log(`Running ${migration.version}_${migration.name}...`);
 
     // Execute in transaction for safety
     const transaction = db.transaction(() => {
@@ -102,10 +102,10 @@ export function runMigrations(db: Database.Database, dbPath?: string): void {
 
     try {
       transaction();
-      console.log(`✅ Completed ${migration.version}_${migration.name}`);
+      console.log(`Completed ${migration.version}_${migration.name}`);
       executedCount++;
     } catch (error) {
-      console.error(`❌ Migration ${migration.version}_${migration.name} failed:`, error);
+      console.error(`Migration ${migration.version}_${migration.name} failed:`, error);
       throw error;
     }
   }
@@ -113,18 +113,18 @@ export function runMigrations(db: Database.Database, dbPath?: string): void {
   if (executedCount === 0) {
     console.log('✓ Database is up to date (no migrations needed)');
   } else {
-    console.log(`✅ Applied ${executedCount} migration(s) successfully`);
+    console.log(`Applied ${executedCount} migration(s) successfully`);
 
     // Run validation
     const valid = validateMigration(db);
     if (!valid) {
-      console.warn('⚠️  Some validation checks failed. Please review the results above.');
+      console.warn('Some validation checks failed. Please review the results above.');
     }
   }
 }
 
 export function rollbackMigration(db: Database.Database, targetVersion?: string): void {
-  console.log('🔄 Rolling back migrations...');
+  console.log('Rolling back migrations...');
 
   const applied = db.prepare(`
     SELECT version, name FROM migrations
@@ -146,7 +146,7 @@ export function rollbackMigration(db: Database.Database, targetVersion?: string)
       throw new Error(`Migration ${record.version} not found in code`);
     }
 
-    console.log(`⏮️  Rolling back ${record.version}_${record.name}...`);
+    console.log(`Rolling back ${record.version}_${record.name}...`);
 
     const transaction = db.transaction(() => {
       migration.down(db);
@@ -154,7 +154,7 @@ export function rollbackMigration(db: Database.Database, targetVersion?: string)
     });
 
     transaction();
-    console.log(`✅ Rolled back ${record.version}_${record.name}`);
+    console.log(`Rolled back ${record.version}_${record.name}`);
 
     if (!targetVersion) {
       // Only rollback one migration if no target specified

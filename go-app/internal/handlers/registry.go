@@ -9,13 +9,14 @@ import (
 )
 
 type Handlers struct {
-	docker *docker.Client
-	store  *store.SQLiteStore
-	token  string
+	docker        *docker.Client
+	store         *store.SQLiteStore
+	token         string
+	backupBaseDir string
 }
 
-func New(dockerClient *docker.Client, store *store.SQLiteStore, token string) *Handlers {
-	return &Handlers{docker: dockerClient, store: store, token: token}
+func New(dockerClient *docker.Client, store *store.SQLiteStore, token string, backupBaseDir string) *Handlers {
+	return &Handlers{docker: dockerClient, store: store, token: token, backupBaseDir: backupBaseDir}
 }
 
 func (h *Handlers) Auth(next http.HandlerFunc) http.HandlerFunc {

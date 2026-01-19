@@ -77,14 +77,15 @@ export default function ConfirmDeleteModal({
         )}
 
         <div
-          className="mb-6 p-3 rounded-lg text-sm"
+          className="mb-6 p-3 rounded-lg text-sm flex items-center gap-2"
           style={{
             background: 'rgba(255, 165, 0, 0.1)',
             border: '1px solid rgba(255, 165, 0, 0.3)',
             color: '#ffa500',
           }}
         >
-          ⚠️ This action cannot be undone.
+          <Warning size={16} weight="duotone" />
+          This action cannot be undone.
         </div>
 
         <div className="flex gap-3">

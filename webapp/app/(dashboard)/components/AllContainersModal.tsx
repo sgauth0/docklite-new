@@ -3,6 +3,22 @@
 import { useEffect, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { useToast } from '@/lib/hooks/useToast';
+import {
+  Cube,
+  X,
+  Lightning,
+  WarningCircle,
+  Package,
+  Eye,
+  EyeSlash,
+  Play,
+  ArrowClockwise,
+  Stop,
+  Trash,
+  ImageSquare,
+  IdentificationCard,
+  CalendarBlank,
+} from '@phosphor-icons/react';
 
 interface DockerContainer {
   id: string;
@@ -111,8 +127,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
         <div className="p-6 border-b border-purple-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-                🐳 All Docker Containers
+              <h2 className="text-3xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                <Cube size={24} weight="duotone" />
+                All Docker Containers
               </h2>
               <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
                 Complete list of all containers on this host
@@ -127,7 +144,10 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                 color: '#ff6b6b',
               }}
             >
-              ✕ Close
+              <span className="inline-flex items-center gap-2">
+                <X size={16} weight="bold" />
+                Close
+              </span>
             </button>
           </div>
         </div>
@@ -136,21 +156,27 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
         <div className="flex-1 overflow-y-auto p-6">
           {loading && (
             <div className="text-center py-12">
-              <div className="text-4xl mb-4 animate-pulse" style={{ color: 'var(--neon-cyan)' }}>⚡</div>
+              <div className="flex justify-center mb-4 animate-pulse" style={{ color: 'var(--neon-cyan)' }}>
+                <Lightning size={32} weight="duotone" />
+              </div>
               <p className="font-mono" style={{ color: 'var(--text-secondary)' }}>Loading containers...</p>
             </div>
           )}
 
           {error && (
             <div className="text-center py-12">
-              <div className="text-4xl mb-4">⚠️</div>
+              <div className="flex justify-center mb-4">
+                <WarningCircle size={32} weight="duotone" color="#ff6b6b" />
+              </div>
               <p className="text-red-500">{error}</p>
             </div>
           )}
 
           {!loading && !error && containers.length === 0 && (
             <div className="text-center py-12">
-              <div className="text-4xl mb-4">📦</div>
+              <div className="flex justify-center mb-4">
+                <Package size={32} weight="duotone" color="var(--neon-cyan)" />
+              </div>
               <p className="font-mono" style={{ color: 'var(--text-secondary)' }}>No containers found</p>
             </div>
           )}
@@ -188,7 +214,10 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                                 border: '1px solid var(--neon-green)',
                               }}
                             >
-                              ⚡ DockLite
+                              <span className="inline-flex items-center gap-2">
+                                <Lightning size={12} weight="duotone" />
+                                DockLite
+                              </span>
                             </span>
                           )}
                           <span
@@ -203,9 +232,18 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                           </span>
                         </div>
                         <div className="space-y-1 text-xs font-mono opacity-75" style={{ color: 'var(--text-secondary)' }}>
-                          <div>🖼️ Image: {container.image}</div>
-                          <div>🆔 ID: {container.id.substring(0, 12)}</div>
-                          <div>📅 Status: {container.status}</div>
+                          <div className="flex items-center gap-2">
+                            <ImageSquare size={14} weight="duotone" />
+                            Image: {container.image}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <IdentificationCard size={14} weight="duotone" />
+                            ID: {container.id.substring(0, 12)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CalendarBlank size={14} weight="duotone" />
+                            Status: {container.status}
+                          </div>
                         </div>
                       </div>
 
@@ -222,7 +260,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                           }}
                           title={isTracked ? 'Untrack container' : 'Track container'}
                         >
-                          {isTracked ? '👁️‍🗨️' : '👁️'}
+                          {isTracked ? <EyeSlash size={16} weight="duotone" /> : <Eye size={16} weight="duotone" />}
                         </button>
                         {!isRunning ? (
                           <button
@@ -233,7 +271,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                               color: 'var(--bg-darker)',
                             }}
                           >
-                            ▶
+                            <Play size={14} weight="duotone" />
                           </button>
                         ) : (
                           <>
@@ -245,7 +283,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                                 color: 'var(--bg-darker)',
                               }}
                             >
-                              ⟳
+                              <ArrowClockwise size={14} weight="duotone" />
                             </button>
                             <button
                               onClick={() => handleAction(container.id, 'stop')}
@@ -255,7 +293,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                                 color: 'white',
                               }}
                             >
-                              ■
+                              <Stop size={14} weight="fill" />
                             </button>
                           </>
                         )}
@@ -268,7 +306,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                             color: '#ff6b6b',
                           }}
                         >
-                          🗑️
+                          <Trash size={14} weight="duotone" />
                         </button>
                       </div>
                     </div>

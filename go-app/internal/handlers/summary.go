@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -24,7 +22,7 @@ func (h *Handlers) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	// Get containers

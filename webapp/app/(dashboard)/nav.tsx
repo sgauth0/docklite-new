@@ -4,9 +4,28 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { UserSession } from '@/types';
-import { Lightning, Sparkle, Database, Package, HardDrives, Globe, Gear } from '@phosphor-icons/react';
+import {
+  Lightning,
+  Sparkle,
+  Database,
+  Package,
+  HardDrives,
+  Globe,
+  Gear,
+  TerminalWindow,
+  UserCircle,
+  CrownSimple,
+  SignOut,
+  UsersThree,
+} from '@phosphor-icons/react';
 
-export default function DashboardNav({ user }: { user: UserSession }) {
+type DashboardNavProps = {
+  user: UserSession;
+  terminalOpen: boolean;
+  onToggleTerminal: () => void;
+};
+
+export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: DashboardNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -131,16 +150,16 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                 )}
               </Link>
               <Link
-                href="/dns"
+                href="/network"
                 className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
-                  isActive('/dns')
+                  isActive('/network')
                     ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
                     : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
                 }`}
               >
                 <Globe size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(79, 214, 255, 0.4))' }} />
-                <span>DNS</span>
-                {isActive('/dns') && (
+                <span>Network</span>
+                {isActive('/network') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
                 )}
               </Link>
@@ -173,11 +192,15 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                 }`}
               >
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl relative" style={{ background: 'rgba(255, 16, 240, 0.2)' }}>
-                  👤
+                  <UserCircle size={22} weight="duotone" />
                   {user.role === 'super_admin' ? (
-                    <span className="absolute -top-1 -right-1 text-xs">👑✨</span>
+                    <span className="absolute -top-1 -right-1 text-xs">
+                      <Sparkle size={12} weight="fill" />
+                    </span>
                   ) : user.isAdmin ? (
-                    <span className="absolute -top-1 -right-1 text-xs">👑</span>
+                    <span className="absolute -top-1 -right-1 text-xs">
+                      <CrownSimple size={12} weight="fill" />
+                    </span>
                   ) : null}
                 </div>
               </button>
@@ -198,9 +221,14 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                     <div className="font-bold text-cyan-300 flex items-center gap-2">
                       {user.username}
                       {user.role === 'super_admin' ? (
-                        <span className="text-sm">👑✨</span>
+                        <span className="text-sm flex items-center gap-1">
+                          <CrownSimple size={14} weight="fill" />
+                          <Sparkle size={12} weight="fill" />
+                        </span>
                       ) : user.isAdmin ? (
-                        <span className="text-sm">👑</span>
+                        <span className="text-sm">
+                          <CrownSimple size={14} weight="fill" />
+                        </span>
                       ) : null}
                     </div>
                     <div className="text-xs text-purple-300 opacity-70">
@@ -213,7 +241,7 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                       className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-cyan-300 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-cyan-900/50 hover:text-cyan-100 transition-all group"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      <span className="group-hover:scale-110 transition-transform">⚙️</span>
+                      <Gear size={16} weight="duotone" className="group-hover:scale-110 transition-transform" />
                       <span>Settings</span>
                     </Link>
                     {user.isAdmin && (
@@ -222,7 +250,7 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                         className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-cyan-300 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-cyan-900/50 hover:text-cyan-100 transition-all group"
                         onClick={() => setIsDropdownOpen(false)}
                       >
-                        <span className="group-hover:scale-110 transition-transform">👥</span>
+                        <UsersThree size={16} weight="duotone" className="group-hover:scale-110 transition-transform" />
                         <span>Users</span>
                       </Link>
                     )}
@@ -240,8 +268,25 @@ export default function DashboardNav({ user }: { user: UserSession }) {
                 boxShadow: '0 0 12px rgba(255, 16, 240, 0.4)'
               }}
             >
-              <span>🚪</span>
+              <SignOut size={16} weight="duotone" />
               <span className="hidden sm:inline">Logout</span>
+            </button>
+
+            <button
+              onClick={onToggleTerminal}
+              className="px-4 py-2 text-sm font-bold rounded-xl transition-all hover:scale-105 flex items-center gap-2"
+              style={{
+                background: terminalOpen
+                  ? 'linear-gradient(135deg, #00e863 0%, #2dffb5 100%)'
+                  : 'linear-gradient(135deg, #00e863 0%, #00bcd4 100%)',
+                color: '#04130b',
+                boxShadow: terminalOpen
+                  ? '0 0 18px rgba(45, 255, 181, 0.6)'
+                  : '0 0 12px rgba(0, 232, 99, 0.45)'
+              }}
+            >
+              <TerminalWindow size={18} weight="duotone" />
+              <span className="hidden sm:inline">Terminal</span>
             </button>
           </div>
         </div>

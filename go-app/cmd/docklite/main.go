@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
@@ -8,9 +9,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"docklite-agent/internal/cli"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const version = "dev"
@@ -49,6 +53,10 @@ func main() {
 	switch args[0] {
 	case "version":
 		fmt.Println("docklite", version)
+	case "login":
+		handleLogin(cfg, cfgPath, client, opts, args[1:])
+	case "logout":
+		handleLogout(cfg, cfgPath, opts, args[1:])
 	case "status":
 		runGet(client, opts, "/api/status")
 	case "info":
@@ -242,6 +250,133 @@ func handleTokenRevoke(client *cli.Client, opts globalOptions, args []string) {
 	fmt.Println("token revoked")
 }
 
+func handleLogin(cfg *cli.Config, cfgPath string, client *cli.Client, opts globalOptions, args []string) {
+	fs := flag.NewFlagSet("login", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	tokenName := "cli"
+	expiresAt := ""
+	fs.StringVar(&tokenName, "token-name", "cli", "token name")
+	fs.StringVar(&expiresAt, "expires-at", "", "RFC3339 expiration timestamp")
+	_ = fs.Parse(args)
+
+	username, err := promptInput("Username: ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "failed to read username:", err)
+		os.Exit(1)
+	}
+	password, err := promptPassword("Password: ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "failed to read password:", err)
+		os.Exit(1)
+	}
+
+	payload := map[string]any{
+		"username":    username,
+		"password":    password,
+		"issue_token": true,
+		"token_name":  tokenName,
+	}
+	if strings.TrimSpace(expiresAt) != "" {
+		payload["expires_at"] = strings.TrimSpace(expiresAt)
+	}
+
+	loginClient := *client
+	loginClient.Token = ""
+
+	data, err := loginClient.Do(context.Background(), httpMethodPost, "/api/auth/login", payload)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	var resp struct {
+		Token struct {
+			Secret string `json:"secret"`
+		} `json:"token"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		fmt.Fprintln(os.Stderr, "failed to parse response:", err)
+		os.Exit(1)
+	}
+	if strings.TrimSpace(resp.Token.Secret) == "" {
+		fmt.Fprintln(os.Stderr, "login succeeded but token missing from response")
+		os.Exit(1)
+	}
+
+	serverName := opts.Server
+	if serverName == "" {
+		serverName = cfg.CurrentServer
+	}
+	if serverName == "" {
+		serverName = "default"
+	}
+	if cfg.Servers == nil {
+		cfg.Servers = map[string]cli.ServerConfig{}
+	}
+	server := cfg.Servers[serverName]
+	if server.Host == "" {
+		server.Host = client.BaseURL
+	}
+	server.Token = resp.Token.Secret
+	cfg.Servers[serverName] = server
+	if cfg.CurrentServer == "" {
+		cfg.CurrentServer = serverName
+	}
+	if err := cli.SaveConfig(cfg, cfgPath); err != nil {
+		fmt.Fprintln(os.Stderr, "failed to save config:", err)
+		os.Exit(1)
+	}
+
+	if opts.JSON {
+		fmt.Println(string(data))
+		return
+	}
+	fmt.Printf("login succeeded, token saved for %s\n", serverName)
+}
+
+func handleLogout(cfg *cli.Config, cfgPath string, opts globalOptions, args []string) {
+	_ = args
+	serverName := opts.Server
+	if serverName == "" {
+		serverName = cfg.CurrentServer
+	}
+	if serverName == "" {
+		serverName = "default"
+	}
+	server, ok := cfg.Servers[serverName]
+	if !ok {
+		fmt.Fprintln(os.Stderr, "server not found:", serverName)
+		os.Exit(1)
+	}
+	server.Token = ""
+	cfg.Servers[serverName] = server
+	if err := cli.SaveConfig(cfg, cfgPath); err != nil {
+		fmt.Fprintln(os.Stderr, "failed to save config:", err)
+		os.Exit(1)
+	}
+	fmt.Printf("token cleared for %s\n", serverName)
+}
+
+func promptInput(prompt string) (string, error) {
+	fmt.Fprint(os.Stderr, prompt)
+	reader := bufio.NewReader(os.Stdin)
+	value, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(value), nil
+}
+
+func promptPassword(prompt string) (string, error) {
+	fmt.Fprint(os.Stderr, prompt)
+	value, err := terminal.ReadPassword(int(syscall.Stdin))
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(value)), nil
+}
+
 func handleConfig(cfg *cli.Config, cfgPath string, args []string) {
 	if len(args) == 0 || args[0] == "show" {
 		out, _ := json.MarshalIndent(cfg, "", "  ")
@@ -355,6 +490,8 @@ func printUsage() {
 Commands:
   help
   version
+  login [--token-name <name>] [--expires-at <rfc3339>]
+  logout
   status
   info
   list

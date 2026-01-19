@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const defaultNodePort = 3000
@@ -21,7 +19,7 @@ func (h *Handlers) SuggestPort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	containers, err := h.docker.ListContainers(ctx, true)

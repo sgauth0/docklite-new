@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { DesktopTower, Cube, Gear, Wrench, ArrowClockwise } from '@phosphor-icons/react';
 
 export default function SystemSettingsPage() {
   const [checkingFolders, setCheckingFolders] = useState(false);
@@ -28,29 +28,22 @@ export default function SystemSettingsPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-            🖥️ System Settings
-          </h1>
-          <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▶ DOCKER DAEMON CONFIGURATION ◀
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          className="cyber-button inline-flex items-center gap-2"
-        >
-          ← Back to Settings
-        </Link>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+          <DesktopTower size={20} weight="duotone" />
+          System Settings
+        </h2>
+        <p className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
+          Docker daemon configuration
+        </p>
       </div>
 
       {/* Docker Status */}
       <div className="card-vapor p-6 rounded-xl">
-        <h2 className="text-2xl font-bold neon-text mb-4" style={{ color: 'var(--neon-green)' }}>
-          🐳 Docker Connection
+        <h2 className="text-2xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+          <Cube size={20} weight="duotone" />
+          Docker Connection
         </h2>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -71,8 +64,9 @@ export default function SystemSettingsPage() {
 
       {/* Configuration Options */}
       <div className="card-vapor p-6 rounded-xl">
-        <h2 className="text-2xl font-bold neon-text mb-6" style={{ color: 'var(--neon-yellow)' }}>
-          ⚙️ Configuration
+        <h2 className="text-2xl font-bold neon-text mb-6 flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
+          <Gear size={20} weight="duotone" />
+          Configuration
         </h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg border border-purple-500/20">
@@ -98,8 +92,9 @@ export default function SystemSettingsPage() {
 
       {/* Maintenance Tools */}
       <div className="card-vapor p-6 rounded-xl">
-        <h2 className="text-2xl font-bold neon-text mb-6" style={{ color: 'var(--neon-pink)' }}>
-          🔧 Maintenance Tools
+        <h2 className="text-2xl font-bold neon-text mb-6 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+          <Wrench size={20} weight="duotone" />
+          Maintenance Tools
         </h2>
         <div className="space-y-4">
           <div className="p-4 rounded-lg border border-purple-500/20">
@@ -125,7 +120,17 @@ export default function SystemSettingsPage() {
                   color: 'white',
                 }}
               >
-                {checkingFolders ? '⟳ Checking...' : '▶ Run Folder Check'}
+                {checkingFolders ? (
+                  <span className="inline-flex items-center gap-2">
+                    <ArrowClockwise size={16} weight="duotone" className="animate-spin" />
+                    Checking...
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <ArrowClockwise size={16} weight="duotone" />
+                    Run Folder Check
+                  </span>
+                )}
               </button>
               {folderCheckResult && (
                 <div

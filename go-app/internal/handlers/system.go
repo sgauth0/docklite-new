@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 const sitesBasePath = "/var/www/sites"
@@ -56,7 +54,7 @@ func (h *Handlers) DBCleanup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	containers, err := h.docker.ListContainers(ctx, true)

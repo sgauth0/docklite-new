@@ -39,7 +39,7 @@ export async function createSiteDirectory(username: string, domain: string): Pro
       await fs.chmod(sitePath, 0o755);
       console.log(`✓ Successfully set directory permissions.`);
     } catch (error) {
-      console.warn(`⚠️ Failed to chmod ${sitePath}, continuing:`, error);
+      console.warn(`Failed to chmod ${sitePath}, continuing:`, error);
     }
 
     if (typeof process.getuid === 'function' && typeof process.getgid === 'function') {
@@ -47,7 +47,7 @@ export async function createSiteDirectory(username: string, domain: string): Pro
         await fs.chown(sitePath, process.getuid(), process.getgid());
         console.log(`✓ Successfully changed directory ownership.`);
       } catch (error) {
-        console.warn(`⚠️ Failed to chown ${sitePath}, continuing:`, error);
+        console.warn(`Failed to chown ${sitePath}, continuing:`, error);
       }
     }
 

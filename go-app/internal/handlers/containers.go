@@ -66,7 +66,7 @@ func (h *Handlers) ListContainers(w http.ResponseWriter, r *http.Request) {
 		folders = []store.Folder{*folder}
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	containers, err := h.docker.ListContainers(ctx, true)
@@ -161,7 +161,7 @@ func (h *Handlers) ListAllContainers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	containers, err := h.docker.ListContainers(ctx, true)
@@ -243,7 +243,7 @@ func (h *Handlers) handleLifecycle(w http.ResponseWriter, r *http.Request, id st
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	site, err := h.authorizeContainerAccess(ctx, r, id)
 	if err != nil {
@@ -273,7 +273,7 @@ func (h *Handlers) handleLogs(w http.ResponseWriter, r *http.Request, id string)
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	if _, err := h.authorizeContainerAccess(ctx, r, id); err != nil {
 		if err == errForbidden {
@@ -300,7 +300,7 @@ func (h *Handlers) handleStats(w http.ResponseWriter, r *http.Request, id string
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	if _, err := h.authorizeContainerAccess(ctx, r, id); err != nil {
 		if err == errForbidden {
@@ -323,7 +323,7 @@ func (h *Handlers) handleInspect(w http.ResponseWriter, r *http.Request, id stri
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	container, err := h.docker.InspectContainer(ctx, id)
 	if err != nil {
@@ -350,7 +350,7 @@ func (h *Handlers) handleApp(w http.ResponseWriter, r *http.Request, id string) 
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	container, err := h.docker.InspectContainer(ctx, id)
 	if err != nil {
@@ -377,7 +377,7 @@ func (h *Handlers) handleDelete(w http.ResponseWriter, r *http.Request, id strin
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	site, err := h.authorizeContainerAccess(ctx, r, id)
 	if err != nil {
@@ -475,7 +475,7 @@ func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
 	}
 	var existingContainerID string
 	if existingSite != nil && existingSite.ContainerID != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := dockerContext(r.Context())
 		defer cancel()
 		if _, err := h.docker.InspectContainer(ctx, *existingSite.ContainerID); err == nil {
 			existingContainerID = *existingSite.ContainerID
@@ -519,7 +519,7 @@ func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 	if existingContainerID != "" {
 		_ = h.docker.RemoveContainer(ctx, existingContainerID)

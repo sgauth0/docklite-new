@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Plus, XCircle, UserCircle, Lock, CrownSimple, SpinnerGap, Sparkle } from '@phosphor-icons/react';
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -55,11 +56,13 @@ export default function CreateUserPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <Link href="/users" className="text-sm font-bold hover:scale-105 transition-transform inline-block" style={{ color: 'var(--neon-cyan)' }}>
-          ← Back to Users
+        <Link href="/users" className="text-sm font-bold hover:scale-105 transition-transform inline-flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+          <ArrowLeft size={14} weight="bold" />
+          Back to Users
         </Link>
-        <h1 className="mt-4 text-4xl font-bold neon-text" style={{ color: 'var(--neon-pink)' }}>
-          ➕ Create New User
+        <h1 className="mt-4 text-4xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+          <Plus size={22} weight="bold" />
+          Create New User
         </h1>
       </div>
 
@@ -71,13 +74,17 @@ export default function CreateUserPage() {
               border: '2px solid rgba(255, 107, 107, 0.5)',
               color: '#ff6b6b'
             }}>
-              ❌ {error}
+              <span className="inline-flex items-center gap-2">
+                <XCircle size={18} weight="duotone" />
+                {error}
+              </span>
             </div>
           )}
 
           <div>
-            <label htmlFor="username" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-cyan)' }}>
-              👤 USERNAME
+            <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <UserCircle size={18} weight="duotone" />
+              USERNAME
             </label>
             <input
               type="text"
@@ -91,8 +98,9 @@ export default function CreateUserPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-              🔐 PASSWORD
+            <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+              <Lock size={18} weight="duotone" />
+              PASSWORD
             </label>
             <input
               type="password"
@@ -110,8 +118,9 @@ export default function CreateUserPage() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>
-              🔒 CONFIRM PASSWORD
+            <label htmlFor="confirmPassword" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+              <Lock size={18} weight="duotone" />
+              CONFIRM PASSWORD
             </label>
             <input
               type="password"
@@ -133,7 +142,7 @@ export default function CreateUserPage() {
               className="w-5 h-5 rounded"
             />
             <label htmlFor="isAdmin" className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
-              <span>👑</span>
+              <CrownSimple size={16} weight="fill" />
               <span>Administrator (full access to all sites and settings)</span>
             </label>
           </div>
@@ -155,7 +164,17 @@ export default function CreateUserPage() {
               disabled={loading}
               className="btn-neon px-8 py-3 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '⟳ Creating...' : '✨ Create User'}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerGap size={16} weight="duotone" className="animate-spin" />
+                  Creating...
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <Sparkle size={16} weight="duotone" />
+                  Create User
+                </span>
+              )}
             </button>
           </div>
         </form>

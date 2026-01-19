@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Globe, X, Info } from '@phosphor-icons/react';
+import { Globe, X, Info, Cloud } from '@phosphor-icons/react';
 
 interface AddDnsRecordModalProps {
   zones: any[];
@@ -300,7 +300,8 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
               />
               <div className="flex-1">
                 <label htmlFor="proxied" className="text-sm font-bold flex items-center gap-2" style={{ color: '#ffa500' }}>
-                  <span>🟠 Proxy through Cloudflare</span>
+                  <Cloud size={16} weight="duotone" />
+                  Proxy through Cloudflare
                 </label>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                   Enable Cloudflare&apos;s CDN, DDoS protection, and SSL (orange cloud)

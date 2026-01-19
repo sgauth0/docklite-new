@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Globe, X } from '@phosphor-icons/react';
+import { Globe, X, Lightbulb } from '@phosphor-icons/react';
 
 interface AddDnsZoneModalProps {
   onClose: () => void;
@@ -183,8 +183,9 @@ export default function AddDnsZoneModal({ onClose, onSuccess }: AddDnsZoneModalP
 
         {/* Help text */}
         <div className="mt-6 p-4 rounded-lg" style={{ background: 'rgba(0, 232, 99, 0.05)', border: '1px solid rgba(0, 232, 99, 0.2)' }}>
-          <p className="text-xs font-bold mb-2" style={{ color: 'var(--neon-green)' }}>
-            💡 How to find your Zone ID:
+          <p className="text-xs font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+            <Lightbulb size={14} weight="duotone" />
+            How to find your Zone ID:
           </p>
           <ol className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
             <li>1. Go to your Cloudflare dashboard</li>

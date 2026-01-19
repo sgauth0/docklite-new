@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Lightning, WarningCircle } from '@phosphor-icons/react';
 
 interface User {
   id: number;
@@ -169,7 +169,9 @@ export default function ManageUsersPage() {
   if (loading) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4 animate-float">⚡</div>
+        <div className="flex justify-center mb-4 animate-float">
+          <Lightning size={48} weight="duotone" color="var(--neon-cyan)" />
+        </div>
         <div className="text-2xl font-bold neon-text animate-pulse" style={{ color: 'var(--neon-cyan)' }}>
           Loading users...
         </div>
@@ -180,7 +182,9 @@ export default function ManageUsersPage() {
   if (error) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4">⚠️</div>
+        <div className="flex justify-center mb-4">
+          <WarningCircle size={48} weight="duotone" color="#ff6b6b" />
+        </div>
         <div className="text-xl font-bold mb-4" style={{ color: '#ff6b6b' }}>
           {error}
         </div>
@@ -189,13 +193,10 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <Link href="/settings" className="cyber-button inline-flex items-center gap-2">
-            ← Back to Settings
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold neon-text-pink">Manage Users</h1>
+          <h2 className="text-2xl font-bold neon-text-pink">Manage Users</h2>
           <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
             ▸ Manage system users and permissions ◂
           </p>
