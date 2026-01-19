@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { CheckCircle, XCircle, WarningCircle, Info, X } from '@phosphor-icons/react';
 
 export interface ToastProps {
   message: string;
@@ -22,25 +23,25 @@ export default function Toast({ message, type, onClose, duration = 5000 }: Toast
       bg: 'rgba(57, 255, 20, 0.15)',
       border: 'var(--neon-green)',
       color: 'var(--neon-green)',
-      emoji: '✓',
+      icon: <CheckCircle size={22} weight="duotone" />,
     },
     error: {
       bg: 'rgba(255, 107, 107, 0.15)',
       border: '#ff6b6b',
       color: '#ff6b6b',
-      emoji: '✗',
+      icon: <XCircle size={22} weight="duotone" />,
     },
     warning: {
       bg: 'rgba(255, 200, 87, 0.15)',
       border: 'var(--neon-yellow)',
       color: 'var(--neon-yellow)',
-      emoji: '⚠️',
+      icon: <WarningCircle size={22} weight="duotone" />,
     },
     info: {
       bg: 'rgba(0, 255, 255, 0.15)',
       border: 'var(--neon-cyan)',
       color: 'var(--neon-cyan)',
-      emoji: 'ℹ️',
+      icon: <Info size={22} weight="duotone" />,
     },
   };
 
@@ -56,7 +57,9 @@ export default function Toast({ message, type, onClose, duration = 5000 }: Toast
       }}
     >
       <div className="flex items-start gap-3">
-        <div className="text-2xl flex-shrink-0">{style.emoji}</div>
+        <div className="flex-shrink-0" style={{ color: style.color }}>
+          {style.icon}
+        </div>
         <div className="flex-1">
           <p className="font-bold text-sm" style={{ color: style.color }}>
             {message}
@@ -64,10 +67,10 @@ export default function Toast({ message, type, onClose, duration = 5000 }: Toast
         </div>
         <button
           onClick={onClose}
-          className="flex-shrink-0 text-xl opacity-70 hover:opacity-100 transition-opacity"
+          className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
           style={{ color: style.color }}
         >
-          ✕
+          <X size={18} weight="bold" />
         </button>
       </div>
       {/* Progress bar */}

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { ContainerInfo, FolderNode } from '@/types';
 import ContainerCard from './ContainerCard';
-import { Folder as FolderIcon, FolderOpen, Pencil, Trash, Plus } from '@phosphor-icons/react';
+import { Folder as FolderIcon, FolderOpen, Pencil, Trash, Plus, CaretRight, CaretDown } from '@phosphor-icons/react';
 import {
   useDroppable,
 } from '@dnd-kit/core';
@@ -16,7 +16,6 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface FolderSectionProps {
   folderNode: FolderNode;
-  getContainerBadge: (container: ContainerInfo) => ReactNode;
   onAction: (containerId: string, action: 'start' | 'stop' | 'restart') => void;
   onViewDetails: (id: string, name: string) => void;
   onDelete?: (containerId: string, containerName: string) => void;
@@ -33,7 +32,6 @@ interface FolderSectionProps {
 function SortableContainer({
   container,
   folderId,
-  badge,
   onAction,
   onViewDetails,
   onDelete,
@@ -44,7 +42,6 @@ function SortableContainer({
 }: {
   container: ContainerInfo;
   folderId: number;
-  badge: ReactNode;
   onAction: (containerId: string, action: 'start' | 'stop' | 'restart') => void;
   onViewDetails: (id: string, name: string) => void;
   onDelete?: (containerId: string, containerName: string) => void;
@@ -77,9 +74,6 @@ function SortableContainer({
         {...dragProps}
         style={{ cursor: menuOpen ? 'default' : 'grab' }}
       >
-        {/* Badge Overlay */}
-        <div className="absolute -top-2 -right-2 z-10 pointer-events-none">{badge}</div>
-
         <ContainerCard
           container={container}
           onAction={onAction}
@@ -98,7 +92,6 @@ function SortableContainer({
 
 export default function FolderSection({
   folderNode,
-  getContainerBadge,
   onAction,
   onViewDetails,
   onDelete,
@@ -135,7 +128,7 @@ export default function FolderSection({
           className="flex items-center gap-3 group"
         >
           <span className="text-sm opacity-50 group-hover:opacity-100 transition-opacity">
-            {isCollapsed ? '▶' : '▼'}
+            {isCollapsed ? <CaretRight size={12} weight="bold" /> : <CaretDown size={12} weight="bold" />}
           </span>
           <span className="transition-transform group-hover:scale-110">
             {isCollapsed ? (
@@ -209,25 +202,20 @@ export default function FolderSection({
               isOver ? 'drag-over' : 'border-transparent'
             }`}
           >
-            {localContainers.map((container) => {
-              const badge = getContainerBadge(container);
-
-              return (
-                <SortableContainer
-                  key={container.id}
-                  container={container}
-                  folderId={folder.id}
-                  badge={badge}
-                  onAction={onAction}
-                  onViewDetails={onViewDetails}
-                  onDelete={onDelete}
-                  onAssign={onAssign}
-                  canAssign={canAssign}
-                  onMoveFolder={onMoveFolder}
-                  onToggleTracking={onToggleTracking}
-                />
-              );
-            })}
+            {localContainers.map((container) => (
+              <SortableContainer
+                key={container.id}
+                container={container}
+                folderId={folder.id}
+                onAction={onAction}
+                onViewDetails={onViewDetails}
+                onDelete={onDelete}
+                onAssign={onAssign}
+                canAssign={canAssign}
+                onMoveFolder={onMoveFolder}
+                onToggleTracking={onToggleTracking}
+              />
+            ))}
           </div>
         </SortableContext>
       )}
@@ -246,7 +234,6 @@ export default function FolderSection({
             <FolderSection
               key={childFolder.id}
               folderNode={childFolder}
-              getContainerBadge={getContainerBadge}
               onAction={onAction}
               onViewDetails={onViewDetails}
               onDelete={onDelete}

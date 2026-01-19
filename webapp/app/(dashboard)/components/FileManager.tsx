@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import FileEditorModal from './FileEditorModal';
 import { useToast } from '@/lib/hooks/useToast';
+import { Folder, File as FileIcon } from '@phosphor-icons/react';
 
 interface FileEntry {
   name: string;
@@ -49,23 +50,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
     return [];
   };
 
-  useEffect(() => {
-    fetchFiles();
-  }, [currentPath]);
-
-  useEffect(() => {
-    const closeMenu = () => setContextMenu(null);
-    if (contextMenu) {
-      window.addEventListener('click', closeMenu);
-      window.addEventListener('scroll', closeMenu, true);
-    }
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('scroll', closeMenu, true);
-    };
-  }, [contextMenu]);
-
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -80,7 +65,23 @@ export default function FileManager({ userSession, embedded = false }: FileManag
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentPath]);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', closeMenu);
+      window.addEventListener('scroll', closeMenu, true);
+    }
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+    };
+  }, [contextMenu]);
 
   const handleFileClick = async (file: FileEntry) => {
     if (file.isDirectory) {
@@ -374,7 +375,13 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                   onClick={() => handleFileClick(file)}
                   className="flex items-center gap-2 text-left min-w-0"
                 >
-                  <span>{file.isDirectory ? '📁' : '📄'}</span>
+                  <span>
+                    {file.isDirectory ? (
+                      <Folder size={16} weight="duotone" />
+                    ) : (
+                      <FileIcon size={16} weight="duotone" />
+                    )}
+                  </span>
                   <span className="text-sm text-cyan-100 truncate">{file.name}</span>
                 </button>
                 {!file.isDirectory && (
@@ -511,7 +518,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                           onClick={() => handlePickerOpen(entry.name)}
                           className="w-full text-left px-2 py-2 rounded-md hover:bg-purple-900/30 text-sm text-cyan-100"
                         >
-                          📁 {entry.name}
+                          <span className="inline-flex items-center gap-2">
+                            <Folder size={16} weight="duotone" />
+                            {entry.name}
+                          </span>
                         </button>
                       </li>
                     ))}

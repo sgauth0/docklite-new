@@ -9,18 +9,12 @@ import (
 
 const maxJSONBodyBytes = 10 << 20
 
-func readJSON(r *http.Request, dest any) error {
-	limited := &io.LimitedReader{R: r.Body, N: maxJSONBodyBytes + 1}
-	decoder := json.NewDecoder(limited)
+func readJSON(w http.ResponseWriter, r *http.Request, dest any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
+	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dest); err != nil {
-		if limited.N <= 0 {
-			return errors.New("request body too large")
-		}
 		return err
-	}
-	if limited.N <= 0 {
-		return errors.New("request body too large")
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		return errors.New("invalid request body")

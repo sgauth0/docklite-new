@@ -76,7 +76,7 @@ func (h *Handlers) CreatePath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req createFileRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -136,7 +136,7 @@ func (h *Handlers) DeletePath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req deletePathRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -158,7 +158,7 @@ func (h *Handlers) RenamePath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req renamePathRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

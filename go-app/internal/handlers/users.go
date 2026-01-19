@@ -31,7 +31,7 @@ func (h *Handlers) Users(w http.ResponseWriter, r *http.Request) {
 			Password string `json:"password"`
 			IsAdmin  bool   `json:"isAdmin"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -123,7 +123,7 @@ func (h *Handlers) UserPassword(w http.ResponseWriter, r *http.Request) {
 		CurrentPassword string `json:"currentPassword"`
 		NewPassword     string `json:"newPassword"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

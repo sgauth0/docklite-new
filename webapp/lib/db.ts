@@ -102,7 +102,7 @@ async function ensureUserFoldersOnStartup() {
       await ensureAllUserFolders(users);
     }
   } catch (error) {
-    console.error('⚠️ Failed to check user folders on startup:', error);
+    console.error('Failed to check user folders on startup:', error);
   }
 }
 
@@ -118,7 +118,7 @@ function seedAdminUser() {
 
       if (!seedUsername || !seedPassword) {
         if (process.env.NODE_ENV === 'production') {
-          console.warn('⚠️ Skipping admin seed: SEED_ADMIN_USERNAME/SEED_ADMIN_PASSWORD are not set.');
+          console.warn('Skipping admin seed: SEED_ADMIN_USERNAME/SEED_ADMIN_PASSWORD are not set.');
           return;
         }
         const devUsername = 'superadmin';
@@ -207,7 +207,7 @@ export function updateUserPassword(userId: number, password: string): void {
 }
 
 export function clearUserSessions(userId: number): void {
-  console.warn(`⚠️ clearUserSessions(${userId}) called: session storage uses cookies only.`);
+  console.warn(`clearUserSessions(${userId}) called: session storage uses cookies only.`);
 }
 
 export function getUserSiteCount(userId: number): number {

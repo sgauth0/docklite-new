@@ -8,36 +8,15 @@ interface AddBackupDestinationModalProps {
   onSuccess: () => void;
 }
 
-type DestinationType = 'local' | 'sftp' | 's3' | 'gdrive' | 'backblaze';
-
-const DESTINATION_TYPES = [
-  { value: 'local', label: 'Local Storage', description: 'Save to local server directory' },
-  { value: 'sftp', label: 'SFTP', description: 'Secure File Transfer Protocol' },
-  { value: 's3', label: 'Amazon S3', description: 'AWS S3 bucket storage' },
-  { value: 'backblaze', label: 'Backblaze B2', description: 'Backblaze cloud storage' },
-];
+type DestinationType = 'local';
 
 export default function AddBackupDestinationModal({ onClose, onSuccess }: AddBackupDestinationModalProps) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<DestinationType>('local');
+  const [type] = useState<DestinationType>('local');
   const [enabled, setEnabled] = useState(true);
 
   // Local config
   const [path, setPath] = useState('/var/backups/docklite');
-
-  // SFTP config
-  const [host, setHost] = useState('');
-  const [port, setPort] = useState(22);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [remotePath, setRemotePath] = useState('/backups');
-
-  // S3/Backblaze config
-  const [bucket, setBucket] = useState('');
-  const [region, setRegion] = useState('us-east-1');
-  const [accessKey, setAccessKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [endpoint, setEndpoint] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,22 +27,7 @@ export default function AddBackupDestinationModal({ onClose, onSuccess }: AddBac
     setLoading(true);
 
     try {
-      let config: any = {};
-
-      switch (type) {
-        case 'local':
-          config = { path };
-          break;
-        case 'sftp':
-          config = { host, port, username, password, remotePath };
-          break;
-        case 's3':
-          config = { bucket, region, accessKey, secretKey };
-          break;
-        case 'backblaze':
-          config = { bucket, endpoint, accessKey, secretKey };
-          break;
-      }
+      const config = { path };
 
       const res = await fetch('/api/backups/destinations', {
         method: 'POST',
@@ -155,244 +119,31 @@ export default function AddBackupDestinationModal({ onClose, onSuccess }: AddBac
             <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
               Storage Type
             </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as DestinationType)}
-              className="input-vapor w-full"
-              required
-              disabled={loading}
-            >
-              {DESTINATION_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label} - {t.description}
-                </option>
-              ))}
-            </select>
+            <div className="input-vapor w-full flex items-center">
+              Local Storage
+            </div>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Scheduled backups only support local storage in V1.
+            </p>
           </div>
 
-          {/* Local Storage Config */}
-          {type === 'local' && (
-            <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                Local Path
-              </label>
-              <input
-                type="text"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                placeholder="/var/backups/docklite"
-                className="input-vapor w-full font-mono text-sm"
-                required
-                disabled={loading}
-              />
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Directory where backups will be stored on the server
-              </p>
-            </div>
-          )}
-
-          {/* SFTP Config */}
-          {type === 'sftp' && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Host
-                  </label>
-                  <input
-                    type="text"
-                    value={host}
-                    onChange={(e) => setHost(e.target.value)}
-                    placeholder="sftp.example.com"
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Port
-                  </label>
-                  <input
-                    type="number"
-                    value={port}
-                    onChange={(e) => setPort(Number(e.target.value))}
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  Remote Path
-                </label>
-                <input
-                  type="text"
-                  value={remotePath}
-                  onChange={(e) => setRemotePath(e.target.value)}
-                  placeholder="/backups"
-                  className="input-vapor w-full font-mono text-sm"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </>
-          )}
-
-          {/* S3 Config */}
-          {type === 's3' && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Bucket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={bucket}
-                    onChange={(e) => setBucket(e.target.value)}
-                    placeholder="my-backups"
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Region
-                  </label>
-                  <input
-                    type="text"
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    placeholder="us-east-1"
-                    className="input-vapor w-full"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Access Key ID
-                  </label>
-                  <input
-                    type="text"
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    className="input-vapor w-full font-mono text-sm"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Secret Access Key
-                  </label>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    className="input-vapor w-full font-mono text-sm"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Backblaze Config */}
-          {type === 'backblaze' && (
-            <>
-              <div>
-                <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  Bucket Name
-                </label>
-                <input
-                  type="text"
-                  value={bucket}
-                  onChange={(e) => setBucket(e.target.value)}
-                  placeholder="my-backups"
-                  className="input-vapor w-full"
-                  required
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                  Endpoint URL
-                </label>
-                <input
-                  type="text"
-                  value={endpoint}
-                  onChange={(e) => setEndpoint(e.target.value)}
-                  placeholder="s3.us-west-002.backblazeb2.com"
-                  className="input-vapor w-full font-mono text-sm"
-                  required
-                  disabled={loading}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Application Key ID
-                  </label>
-                  <input
-                    type="text"
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    className="input-vapor w-full font-mono text-sm"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
-                    Application Key
-                  </label>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    className="input-vapor w-full font-mono text-sm"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
+              Local Path
+            </label>
+            <input
+              type="text"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="/var/backups/docklite"
+              className="input-vapor w-full font-mono text-sm"
+              required
+              disabled={loading}
+            />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Directory where backups will be stored on the server.
+            </p>
+          </div>
 
           <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(0, 232, 99, 0.1)' }}>
             <input

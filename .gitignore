@@ -1,6 +1,5 @@
 # DockLite specific
 *.pid
-bin/
 data/
 logs/
 

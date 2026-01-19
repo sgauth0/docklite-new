@@ -194,7 +194,7 @@ func (h *Handlers) SSLRepair(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Domain string `json:"domain"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

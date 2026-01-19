@@ -1,18 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClockCounterClockwise, X } from '@phosphor-icons/react';
+import { ClockCounterClockwise, X, WarningCircle } from '@phosphor-icons/react';
 
 interface AddBackupJobModalProps {
   destinations: any[];
   onClose: () => void;
   onSuccess: () => void;
+  initialJob?: any;
+  mode?: 'create' | 'edit';
 }
 
-type TargetType = 'all-databases' | 'database';
+type TargetType = 'all-sites' | 'site' | 'all-databases' | 'database';
 
 const TARGET_TYPES = [
-  { value: 'all-databases', label: 'All Databases', description: 'Backup all database containers' },
+  { value: 'all-sites', label: 'All Sites', description: 'Backup all sites' },
+  { value: 'site', label: 'Specific Site', description: 'Backup one site' },
+  { value: 'all-databases', label: 'All Databases', description: 'Backup all databases' },
   { value: 'database', label: 'Specific Database', description: 'Backup one database' },
 ];
 
@@ -26,15 +30,16 @@ const FREQUENCIES = [
   { value: 'monthly', label: 'Monthly (1st)' },
 ];
 
-export default function AddBackupJobModal({ destinations, onClose, onSuccess }: AddBackupJobModalProps) {
-  const [destinationId, setDestinationId] = useState(destinations[0]?.id || 0);
-  const [targetType, setTargetType] = useState<TargetType>('all-databases');
-  const [targetId, setTargetId] = useState<number | ''>('');
-  const [frequency, setFrequency] = useState('daily');
-  const [retentionDays, setRetentionDays] = useState(30);
-  const [enabled, setEnabled] = useState(true);
+export default function AddBackupJobModal({ destinations, onClose, onSuccess, initialJob, mode = 'create' }: AddBackupJobModalProps) {
+  const [destinationId, setDestinationId] = useState(initialJob?.destination || destinations[0]?.id || 0);
+  const [targetType, setTargetType] = useState<TargetType>(initialJob?.target_type || 'all-databases');
+  const [targetId, setTargetId] = useState<number | ''>(initialJob?.target_id ?? '');
+  const [frequency, setFrequency] = useState(initialJob?.frequency || 'daily');
+  const [retentionDays, setRetentionDays] = useState(initialJob?.retention_days || 30);
+  const [enabled, setEnabled] = useState(initialJob ? initialJob.enabled === 1 : true);
 
   const [databases, setDatabases] = useState<any[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,7 +48,20 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
     if (targetType === 'database') {
       loadDatabases();
     }
+    if (targetType === 'site') {
+      loadSites();
+    }
   }, [targetType]);
+
+  useEffect(() => {
+    if (!initialJob) return;
+    setDestinationId(initialJob.destination || destinations[0]?.id || 0);
+    setTargetType(initialJob.target_type || 'all-databases');
+    setTargetId(initialJob.target_id ?? '');
+    setFrequency(initialJob.frequency || 'daily');
+    setRetentionDays(initialJob.retention_days || 30);
+    setEnabled(initialJob.enabled === 1);
+  }, [initialJob, destinations]);
 
   const loadDatabases = async () => {
     try {
@@ -51,10 +69,31 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
       const data = await res.json();
       setDatabases(data.databases || []);
       if (data.databases?.length > 0) {
-        setTargetId(data.databases[0].id);
+        setTargetId((current) => (current === '' ? data.databases[0].id : current));
       }
     } catch (err) {
       console.error('Error loading databases:', err);
+    }
+  };
+
+  const loadSites = async () => {
+    try {
+      const res = await fetch('/api/containers/all');
+      const data = await res.json();
+      const found = (data.containers || [])
+        .map((container: any) => {
+          const siteId = container.labels?.['docklite.site.id'];
+          if (!siteId) return null;
+          const domain = container.labels?.['docklite.domain'] || container.name || 'Site';
+          return { id: Number(siteId), label: domain };
+        })
+        .filter(Boolean);
+      setSites(found);
+      if (found.length > 0) {
+        setTargetId((current) => (current === '' ? found[0].id : current));
+      }
+    } catch (err) {
+      console.error('Error loading sites:', err);
     }
   };
 
@@ -64,17 +103,25 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
     setLoading(true);
 
     try {
+      const isEdit = mode === 'edit' && initialJob?.id;
+      const selectedTargetId = targetId === '' ? null : targetId;
+      const payload: any = {
+        destination_id: destinationId,
+        target_type: targetType,
+        target_id: targetType === 'database' || targetType === 'site' ? selectedTargetId : null,
+        frequency,
+        retention_days: retentionDays,
+        enabled: enabled ? 1 : 0,
+      };
+
+      if (isEdit) {
+        payload.id = initialJob.id;
+      }
+
       const res = await fetch('/api/backups/jobs', {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          destination_id: destinationId,
-          target_type: targetType,
-          target_id: targetType === 'database' && targetId !== '' ? targetId : null,
-          frequency,
-          retention_days: retentionDays,
-          enabled: enabled ? 1 : 0
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -116,10 +163,10 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
         <div className="mb-6">
           <h2 className="text-2xl font-bold neon-text flex items-center gap-3" style={{ color: 'var(--neon-cyan)' }}>
             <ClockCounterClockwise size={32} weight="duotone" color="#00e863" />
-            Create Backup Job
+            {mode === 'edit' ? 'Edit Schedule' : 'Create Schedule'}
           </h2>
           <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Schedule automated backups for your databases
+            Schedule automated backups for your sites and databases
           </p>
         </div>
 
@@ -155,8 +202,9 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
               ))}
             </select>
             {destinations.length === 0 && (
-              <p className="text-xs mt-1" style={{ color: '#ffa500' }}>
-                ⚠️ No destinations configured. Add one first in the Destinations tab.
+              <p className="text-xs mt-1 flex items-center gap-2" style={{ color: '#ffa500' }}>
+                <WarningCircle size={14} weight="duotone" />
+                No destinations configured. A local destination will be used automatically.
               </p>
             )}
           </div>
@@ -182,6 +230,32 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
               ))}
             </select>
           </div>
+
+          {targetType === 'site' && (
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--neon-pink)' }}>
+                Select Site
+              </label>
+              <select
+                value={targetId}
+                onChange={(e) => setTargetId(Number(e.target.value))}
+                className="input-vapor w-full"
+                required
+                disabled={loading || sites.length === 0}
+              >
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.label}
+                  </option>
+                ))}
+              </select>
+              {sites.length === 0 && (
+                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  No sites found
+                </p>
+              )}
+            </div>
+          )}
 
           {targetType === 'database' && (
             <div>
@@ -289,7 +363,7 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess }: 
                 boxShadow: '0 0 20px rgba(0, 232, 99, 0.4)',
               }}
             >
-              {loading ? 'Creating...' : 'Create Backup Job'}
+              {loading ? (mode === 'edit' ? 'Saving...' : 'Creating...') : (mode === 'edit' ? 'Save Schedule' : 'Create Schedule')}
             </button>
           </div>
         </form>

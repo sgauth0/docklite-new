@@ -29,7 +29,7 @@ install-gui:
 
 # Run the agent in development mode
 run-agent:
-	cd go-app && go run ./cmd/docklite-agent
+	cd go-app && DATABASE_PATH=../data/docklite.db LISTEN_ADDR=:9000 go run ./cmd/docklite-agent
 
 # Run the TUI in development mode
 run-tui:

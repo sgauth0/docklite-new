@@ -1,6 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Lightning,
+  WarningCircle,
+  UsersThree,
+  Plus,
+  CrownSimple,
+  Lock,
+  UserCircle,
+  SpinnerGap,
+  Sparkle,
+} from '@phosphor-icons/react';
 import Link from 'next/link';
 
 interface User {
@@ -87,7 +98,9 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4 animate-float">⚡</div>
+        <div className="flex justify-center mb-4 animate-float">
+          <Lightning size={48} weight="duotone" color="var(--neon-cyan)" />
+        </div>
         <div className="text-2xl font-bold neon-text animate-pulse" style={{ color: 'var(--neon-cyan)' }}>
           Loading users...
         </div>
@@ -98,7 +111,9 @@ export default function UsersPage() {
   if (error) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4">⚠️</div>
+        <div className="flex justify-center mb-4">
+          <WarningCircle size={48} weight="duotone" color="#ff6b6b" />
+        </div>
         <div className="text-xl font-bold mb-4" style={{ color: '#ff6b6b' }}>
           {error}
         </div>
@@ -110,18 +125,16 @@ export default function UsersPage() {
     <div className="max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-            👥 User Management
+          <h1 className="text-3xl lg:text-4xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <UsersThree size={24} weight="duotone" />
+            User Management
           </h1>
           <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
             ▸ Manage system users and permissions ◂
           </p>
         </div>
-        <Link
-          href="/users/new"
-          className="btn-neon inline-flex items-center gap-2"
-        >
-          <span>➕</span>
+        <Link href="/users/new" className="btn-neon inline-flex items-center gap-2">
+          <Plus size={16} weight="bold" />
           <span>Create User</span>
         </Link>
       </div>
@@ -155,7 +168,7 @@ export default function UsersPage() {
                         <span className="font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
                           {user.username}
                         </span>
-                        {user.is_admin === 1 && <span className="text-sm">👑</span>}
+                        {user.is_admin === 1 && <CrownSimple size={14} weight="fill" />}
                         {isCurrentUser && (
                           <span
                             className="px-2 py-1 text-xs font-bold rounded-full animate-pulse"
@@ -216,7 +229,10 @@ export default function UsersPage() {
                             boxShadow: '0 0 8px rgba(181, 55, 242, 0.4)',
                           }}
                         >
-                          🔐 Change Password
+                          <span className="inline-flex items-center gap-2">
+                            <Lock size={14} weight="duotone" />
+                            Change Password
+                          </span>
                         </button>
                       )}
                     </td>
@@ -230,7 +246,9 @@ export default function UsersPage() {
 
       {users.length === 0 && (
         <div className="text-center py-12 card-vapor mt-6">
-          <div className="text-6xl mb-4">👤</div>
+          <div className="flex justify-center mb-4">
+            <UserCircle size={48} weight="duotone" color="var(--neon-cyan)" />
+          </div>
           <p className="text-lg font-bold neon-text" style={{ color: 'var(--neon-pink)' }}>
             No users yet
           </p>
@@ -254,8 +272,9 @@ export default function UsersPage() {
               border: '2px solid rgba(255, 16, 240, 0.5)',
             }}
           >
-            <h2 className="text-2xl font-bold neon-text mb-6" style={{ color: 'var(--neon-pink)' }}>
-              🔐 Change Password
+            <h2 className="text-2xl font-bold neon-text mb-6 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+              <Lock size={20} weight="duotone" />
+              Change Password
             </h2>
 
             <div className="mb-6">
@@ -266,7 +285,7 @@ export default function UsersPage() {
                 <span className="font-bold text-lg" style={{ color: 'var(--neon-cyan)' }}>
                   {changePasswordUser.username}
                 </span>
-                {changePasswordUser.is_admin === 1 && <span className="text-sm">👑</span>}
+                {changePasswordUser.is_admin === 1 && <CrownSimple size={14} weight="fill" />}
               </div>
             </div>
 
@@ -310,7 +329,17 @@ export default function UsersPage() {
                   boxShadow: '0 0 12px rgba(181, 55, 242, 0.4)',
                 }}
               >
-                {changingPassword ? '⟳ Changing...' : '✨ Change Password'}
+                {changingPassword ? (
+                  <span className="inline-flex items-center gap-2">
+                    <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                    Changing...
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <Sparkle size={14} weight="duotone" />
+                    Change Password
+                  </span>
+                )}
               </button>
             </div>
           </div>

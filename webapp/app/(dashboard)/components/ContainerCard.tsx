@@ -4,7 +4,7 @@ import { ContainerInfo } from '@/types';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Package, Clock, Plug, IdentificationCard, Eye, Trash, Play, ArrowsClockwise, Stop, DotsThree, Copy, Flower, Database, Lightning, UserCircle, Folder } from '@phosphor-icons/react';
+import { Package, Clock, Plug, IdentificationCard, Eye, Trash, Play, ArrowsClockwise, Stop, DotsThree, Copy, UserCircle, Folder } from '@phosphor-icons/react';
 import { useToast } from '@/lib/hooks/useToast';
 
 interface ContainerCardProps {
@@ -77,14 +77,18 @@ export default function ContainerCard({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [onMenuOpenChange]);
 
   useEffect(() => {
     if (!menuOpen || !menuButtonRef.current) return;
     const rect = menuButtonRef.current.getBoundingClientRect();
+    const menuWidth = 200;
+    const margin = 12;
+    const maxLeft = window.innerWidth - menuWidth - margin;
+    const left = Math.min(Math.max(margin, rect.right - menuWidth), maxLeft);
     setMenuPosition({
       top: rect.bottom + 8,
-      left: rect.left,
+      left,
     });
   }, [menuOpen]);
 
@@ -107,9 +111,9 @@ export default function ContainerCard({
         overflow: 'visible',
       }}
     >
-      {/* 3-Dot Menu - Top left */}
+      {/* 3-Dot Menu - Top right */}
       <div
-        className="absolute top-3 left-3 z-20 pointer-events-auto"
+        className="absolute top-3 right-3 z-20 pointer-events-auto"
         ref={menuRef}
         onPointerDown={stopDnd}
         onPointerDownCapture={stopDnd}
@@ -295,21 +299,26 @@ export default function ContainerCard({
 
 
       {/* Status Crate - Top center */}
-      <div className="absolute top-2 left-1/2 -translate-x-1/2">
-        <Package
-          size={48}
-          weight="duotone"
-          style={{
-            color: isRunning ? '#00ffff' : '#4a4a4a',
-            filter: isRunning
-              ? 'drop-shadow(0 0 8px #00ffff) drop-shadow(0 0 12px #00ffff) drop-shadow(0 0 16px #00ffff80)'
-              : 'drop-shadow(0 0 2px #4a4a4a40)',
-          }}
-        />
+      <div
+        className="absolute top-3 left-1/2"
+        style={{ transform: 'translate(-52%, 0.25rem)' }}
+      >
+        <div className={isRunning ? 'animate-float' : ''} style={{ opacity: isRunning ? 1 : 0.6 }}>
+          <Package
+            size={48}
+            weight="duotone"
+            style={{
+              color: isRunning ? '#00ffff' : '#4a4a4a',
+              filter: isRunning
+                ? 'drop-shadow(0 0 8px #00ffff) drop-shadow(0 0 12px #00ffff) drop-shadow(0 0 16px #00ffff80)'
+                : 'drop-shadow(0 0 2px #4a4a4a40)',
+            }}
+          />
+        </div>
       </div>
 
       {/* Container Name - Better typography */}
-      <div className="mb-2 text-center mt-10 relative z-20" style={{ overflow: 'visible', background: 'transparent' }}>
+      <div className="mb-2 text-center mt-14 relative z-20" style={{ overflow: 'visible', background: 'transparent' }}>
         <h3
           className="font-bold text-lg neon-text mb-1 leading-tight line-clamp-3"
           style={{
