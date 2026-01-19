@@ -58,20 +58,11 @@ mkdir -p ./data
 # Check if database exists
 if [ ! -f "$DATABASE_PATH" ]; then
     echo -e "${YELLOW}Database not found at $DATABASE_PATH${NC}"
-    echo -e "${YELLOW}Creating new database...${NC}"
-
-    # Check if sqlite3 is available
-    if command -v sqlite3 >/dev/null 2>&1; then
-        sqlite3 "$DATABASE_PATH" "VACUUM;" 2>/dev/null
-        chmod 644 "$DATABASE_PATH"
-        echo -e "${GREEN}✓ Empty database created${NC}"
-        echo "The GUI will initialize tables on first startup."
-    else
-        echo -e "${YELLOW}Warning: sqlite3 not found, creating empty file${NC}"
-        touch "$DATABASE_PATH"
-        chmod 644 "$DATABASE_PATH"
-        echo "The GUI will initialize the database on first startup."
-    fi
+    echo -e "${YELLOW}Creating empty database file...${NC}"
+    touch "$DATABASE_PATH"
+    chmod 644 "$DATABASE_PATH"
+    echo -e "${GREEN}✓ Empty database file created${NC}"
+    echo "The GUI will initialize tables on first startup."
     echo ""
 fi
 
@@ -121,21 +112,11 @@ while [ $WAITED -lt $MAX_WAIT ]; do
         exit 1
     fi
 
-    # Check if database tables have been created
+    # Check if database tables have been created using Node.js (no sqlite3 CLI needed)
     if [ -f "$DATABASE_PATH" ]; then
-        # Try to check for tokens table (requires sqlite3)
-        if command -v sqlite3 >/dev/null 2>&1; then
-            if sqlite3 "$DATABASE_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='tokens';" 2>/dev/null | grep -q "tokens"; then
-                echo -e "${GREEN}✓ Database initialized${NC}"
-                break
-            fi
-        else
-            # Fallback: just check if GUI is responding
-            if curl -s -f "http://localhost:$GUI_PORT/" >/dev/null 2>&1; then
-                echo -e "${GREEN}✓ GUI responding${NC}"
-                sleep 3  # Give migrations a bit more time
-                break
-            fi
+        if DATABASE_PATH="$DATABASE_PATH" node check-db.js >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Database initialized${NC}"
+            break
         fi
     fi
 
