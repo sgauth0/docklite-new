@@ -452,7 +452,7 @@ export default function ServerPage() {
       )}
 
       {accessDenied ? null : (
-
+      <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card-vapor p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
@@ -939,6 +939,7 @@ export default function ServerPage() {
           </div>
         </div>
       </div>
+      </>
       )}
     </div>
   );
