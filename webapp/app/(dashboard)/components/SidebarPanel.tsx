@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import FileManager from './FileManager';
 import SchemaBrowser from '../databases/SchemaBrowser';
@@ -29,21 +29,108 @@ export default function SidebarPanel({
   const [selectedContent, setSelectedContent] = useState<SidebarContent>(defaultContent);
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  // Resize functionality
+  const [width, setWidth] = useState<number>(20); // percentage (vw)
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef<number>(0);
+  const resizeStartWidth = useRef<number>(0);
+
+  // Load saved width from localStorage on mount
+  useEffect(() => {
+    const savedWidth = localStorage.getItem(`sidebar-width-${side}`);
+    if (savedWidth) {
+      const parsed = parseFloat(savedWidth);
+      if (!isNaN(parsed) && parsed >= 10 && parsed <= 40) {
+        setWidth(parsed);
+      }
+    }
+  }, [side]);
+
+  // Save width to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem(`sidebar-width-${side}`, width.toString());
+  }, [width, side]);
+
+  // Handle resize start
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = width;
+  };
+
+  // Handle resize move
+  useEffect(() => {
+    if (!isResizing) return;
+
+    // Add cursor style and prevent text selection during resize
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - resizeStartX.current;
+      const viewportWidth = window.innerWidth;
+      const deltaVw = (deltaX / viewportWidth) * 100;
+
+      let newWidth;
+      if (side === 'left') {
+        newWidth = resizeStartWidth.current + deltaVw;
+      } else {
+        newWidth = resizeStartWidth.current - deltaVw;
+      }
+
+      // Constrain width between 10vw and 40vw
+      newWidth = Math.max(10, Math.min(40, newWidth));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, side]);
+
   if (isDbEditMode && side === 'left') {
     return (
       <div className="relative">
-        <div className="fixed top-20 left-0 h-[calc(100vh-80px)] w-[20vw] bg-gradient-to-b from-purple-900/30 to-cyan-900/30 backdrop-blur-md border-r border-purple-500/20 flex flex-col z-40">
+        <div
+          className="fixed top-20 left-0 h-[calc(100vh-80px)] bg-gradient-to-b from-purple-900/30 to-cyan-900/30 backdrop-blur-md border-r border-purple-500/20 flex flex-col z-40"
+          style={{ width: `${width}vw` }}
+        >
           <div className="flex-1 overflow-auto p-4">
             <SchemaBrowser />
           </div>
         </div>
+        {/* Resize handle */}
         <div
-          className="fixed left-[20vw] top-20 h-[calc(100vh-80px)] w-0.5 z-40"
+          className="fixed top-20 h-[calc(100vh-80px)] w-1 cursor-col-resize hover:w-2 transition-all z-50 group"
           style={{
-            background: 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)',
-            boxShadow: '0 0 8px rgba(255, 16, 240, 0.6)',
+            left: `${width}vw`,
+            background: isResizing
+              ? 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)'
+              : 'transparent'
           }}
-        />
+          onMouseDown={handleResizeStart}
+        >
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{
+              background: 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)',
+              boxShadow: '0 0 8px rgba(var(--neon-pink-rgb), 0.6)',
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -67,11 +154,11 @@ export default function SidebarPanel({
           }
           setIsOpen(true);
         }}
-        className={`fixed ${side === 'left' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 px-3 py-6 text-sm font-bold rounded-${side === 'left' ? 'r' : 'l'}-lg transition-all hover:scale-105 z-40`}
+        className={`docklite-sidebar-toggle fixed ${side === 'left' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 px-3 py-6 text-sm font-bold rounded-${side === 'left' ? 'r' : 'l'}-lg transition-all hover:scale-105 z-40`}
         style={{
           background: 'linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-cyan) 100%)',
           color: 'white',
-          boxShadow: '0 0 12px rgba(181, 55, 242, 0.4)',
+          boxShadow: '0 0 12px rgba(var(--neon-purple-rgb), 0.4)',
           writingMode: 'vertical-rl',
         }}
         title={`Open ${side} sidebar`}
@@ -87,7 +174,8 @@ export default function SidebarPanel({
   return (
     <div className="relative">
       <div
-        className={`fixed top-20 ${side === 'left' ? 'left-0' : 'right-0'} h-[calc(100vh-80px)] w-[20vw] bg-gradient-to-b from-purple-900/30 to-cyan-900/30 backdrop-blur-md border-${side === 'left' ? 'r' : 'l'} border-purple-500/20 flex flex-col z-40`}
+        className={`docklite-sidebar-panel fixed top-20 ${side === 'left' ? 'left-0' : 'right-0'} h-[calc(100vh-80px)] bg-gradient-to-b from-purple-900/30 to-cyan-900/30 backdrop-blur-md border-${side === 'left' ? 'r' : 'l'} border-purple-500/20 flex flex-col z-40`}
+        style={{ width: `${width}vw` }}
       >
         {/* Header with selector only */}
         {!isFileBrowser && (
@@ -97,7 +185,7 @@ export default function SidebarPanel({
               onChange={(e) => setSelectedContent(e.target.value as SidebarContent)}
               className="input-vapor px-3 py-2 text-sm font-bold w-full"
               style={{
-                background: 'rgba(15, 5, 30, 0.7)',
+                background: 'var(--surface-muted)',
                 border: '2px solid var(--neon-cyan)',
               }}
             >
@@ -120,23 +208,36 @@ export default function SidebarPanel({
         </div>
       </div>
 
-      {/* Vertical neon line on inner edge */}
+      {/* Resize handle with neon line on inner edge */}
       <div
-        className={`fixed ${side === 'left' ? 'left-[20vw]' : 'right-[20vw]'} top-20 h-[calc(100vh-80px)] w-0.5 z-40`}
+        className={`docklite-sidebar-edge fixed ${side === 'left' ? '' : ''} top-20 h-[calc(100vh-80px)] w-1 cursor-col-resize hover:w-2 transition-all z-50 group`}
         style={{
-          background: 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)',
-          boxShadow: '0 0 8px rgba(255, 16, 240, 0.6)',
+          [side === 'left' ? 'left' : 'right']: `${width}vw`,
+          background: isResizing
+            ? 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)'
+            : 'transparent'
         }}
-      />
+        onMouseDown={handleResizeStart}
+        title="Drag to resize sidebar"
+      >
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{
+            background: 'linear-gradient(180deg, var(--neon-pink) 0%, var(--neon-purple) 50%, var(--neon-cyan) 100%)',
+            boxShadow: '0 0 8px rgba(var(--neon-pink-rgb), 0.6)',
+          }}
+        />
+      </div>
 
       {/* Close button - on inner edge (toward main content), centered vertically */}
       <button
         onClick={() => setIsOpen(false)}
-        className={`fixed ${side === 'left' ? 'left-[20vw]' : 'right-[20vw]'} top-1/2 -translate-y-1/2 ${side === 'left' ? '-translate-x-1/2' : 'translate-x-1/2'} px-2 py-4 text-sm font-bold rounded-lg transition-all hover:scale-110 z-50`}
+        className={`docklite-sidebar-close fixed top-1/2 -translate-y-1/2 ${side === 'left' ? '-translate-x-1/2' : 'translate-x-1/2'} px-2 py-4 text-sm font-bold rounded-lg transition-all hover:scale-110 z-50`}
         style={{
+          [side === 'left' ? 'left' : 'right']: `${width}vw`,
           background: 'linear-gradient(135deg, var(--neon-pink) 0%, var(--neon-purple) 100%)',
           color: 'white',
-          boxShadow: '0 0 12px rgba(255, 16, 240, 0.6)',
+          boxShadow: '0 0 12px rgba(var(--neon-pink-rgb), 0.6)',
         }}
         title="Close sidebar"
       >
@@ -200,7 +301,7 @@ function DatabaseContent() {
       <textarea
         className="w-full h-32 p-2 rounded-lg text-xs font-mono mb-2"
         style={{
-          background: 'rgba(15, 5, 30, 0.7)',
+          background: 'var(--surface-muted)',
           border: '2px solid var(--neon-purple)',
           color: 'var(--text-primary)',
         }}
@@ -230,7 +331,7 @@ function SearchContent() {
         className="input-vapor w-full px-3 py-2 text-sm mb-4"
         placeholder="Search containers, sites..."
         style={{
-          background: 'rgba(15, 5, 30, 0.7)',
+          background: 'var(--surface-muted)',
           border: '2px solid var(--neon-cyan)',
         }}
       />
