@@ -108,13 +108,49 @@ GUI_PID=$!
 cd ..
 
 echo -e "${GREEN}✓ GUI started (PID: $GUI_PID)${NC}"
-sleep 3
+echo -e "${BLUE}Waiting for GUI to initialize database...${NC}"
 
-# Check if GUI is running
-if ! kill -0 $GUI_PID 2>/dev/null; then
-    echo -e "${RED}✗ GUI failed to start${NC}"
-    echo "Check logs/nextjs.log for errors"
-    exit 1
+# Wait for GUI to initialize database (check for tokens table)
+MAX_WAIT=30
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+    # Check if GUI is still running
+    if ! kill -0 $GUI_PID 2>/dev/null; then
+        echo -e "${RED}✗ GUI failed to start${NC}"
+        echo "Check logs/nextjs.log for errors"
+        exit 1
+    fi
+
+    # Check if database tables have been created
+    if [ -f "$DATABASE_PATH" ]; then
+        # Try to check for tokens table (requires sqlite3)
+        if command -v sqlite3 >/dev/null 2>&1; then
+            if sqlite3 "$DATABASE_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name='tokens';" 2>/dev/null | grep -q "tokens"; then
+                echo -e "${GREEN}✓ Database initialized${NC}"
+                break
+            fi
+        else
+            # Fallback: just check if GUI is responding
+            if curl -s -f "http://localhost:$GUI_PORT/" >/dev/null 2>&1; then
+                echo -e "${GREEN}✓ GUI responding${NC}"
+                sleep 3  # Give migrations a bit more time
+                break
+            fi
+        fi
+    fi
+
+    sleep 1
+    WAITED=$((WAITED + 1))
+
+    if [ $((WAITED % 5)) -eq 0 ]; then
+        echo -e "${YELLOW}  Still waiting... (${WAITED}s)${NC}"
+    fi
+done
+
+if [ $WAITED -eq $MAX_WAIT ]; then
+    echo -e "${YELLOW}⚠ Timeout waiting for database initialization${NC}"
+    echo "Proceeding anyway - agent may fail if migrations haven't completed"
+    sleep 2
 fi
 
 # Start Agent
