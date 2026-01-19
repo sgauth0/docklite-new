@@ -57,15 +57,22 @@ mkdir -p ./data
 
 # Check if database exists
 if [ ! -f "$DATABASE_PATH" ]; then
-    echo -e "${YELLOW}Warning: Database not found at $DATABASE_PATH${NC}"
-    echo "You may need to copy from existing installation:"
-    echo "  cp /home/docklite/data/docklite.db ./data/"
-    echo ""
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
+    echo -e "${YELLOW}Database not found at $DATABASE_PATH${NC}"
+    echo -e "${YELLOW}Creating new database...${NC}"
+
+    # Check if sqlite3 is available
+    if command -v sqlite3 >/dev/null 2>&1; then
+        sqlite3 "$DATABASE_PATH" "VACUUM;" 2>/dev/null
+        chmod 644 "$DATABASE_PATH"
+        echo -e "${GREEN}✓ Empty database created${NC}"
+        echo "The GUI will initialize tables on first startup."
+    else
+        echo -e "${YELLOW}Warning: sqlite3 not found, creating empty file${NC}"
+        touch "$DATABASE_PATH"
+        chmod 644 "$DATABASE_PATH"
+        echo "The GUI will initialize the database on first startup."
     fi
+    echo ""
 fi
 
 # Generate token if not set
