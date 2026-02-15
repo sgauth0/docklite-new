@@ -112,9 +112,9 @@ export default function UsersPage() {
     return (
       <div className="text-center py-16">
         <div className="flex justify-center mb-4">
-          <WarningCircle size={48} weight="duotone" color="#ff6b6b" />
+          <WarningCircle size={48} weight="duotone" color="var(--status-error)" />
         </div>
-        <div className="text-xl font-bold mb-4" style={{ color: '#ff6b6b' }}>
+        <div className="text-xl font-bold mb-4" style={{ color: 'var(--status-error)' }}>
           {error}
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function UsersPage() {
       <div className="card-vapor rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-purple-500/20">
-            <thead style={{ background: 'rgba(26, 10, 46, 0.8)' }}>
+            <thead style={{ background: 'var(--surface-strong)' }}>
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-bold" style={{ color: 'var(--neon-cyan)' }}>
                   USERNAME
@@ -173,7 +173,7 @@ export default function UsersPage() {
                           <span
                             className="px-2 py-1 text-xs font-bold rounded-full animate-pulse"
                             style={{
-                              background: 'rgba(57, 255, 20, 0.2)',
+                              background: 'rgba(var(--status-success-rgb), 0.2)',
                               color: 'var(--neon-green)',
                               border: '1px solid var(--neon-green)',
                             }}
@@ -188,7 +188,7 @@ export default function UsersPage() {
                         <span
                           className="px-3 py-1 inline-flex text-xs font-bold rounded-full"
                           style={{
-                            background: 'rgba(255, 215, 0, 0.2)',
+                            background: 'rgba(var(--status-warning-rgb), 0.2)',
                             color: 'var(--neon-yellow)',
                             border: '1px solid var(--neon-yellow)',
                           }}
@@ -199,7 +199,7 @@ export default function UsersPage() {
                         <span
                           className="px-3 py-1 inline-flex text-xs font-bold rounded-full"
                           style={{
-                            background: 'rgba(0, 255, 255, 0.2)',
+                            background: 'rgba(var(--neon-cyan-rgb), 0.2)',
                             color: 'var(--neon-cyan)',
                             border: '1px solid var(--neon-cyan)',
                           }}
@@ -226,7 +226,7 @@ export default function UsersPage() {
                           style={{
                             background: 'linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-pink) 100%)',
                             color: 'white',
-                            boxShadow: '0 0 8px rgba(181, 55, 242, 0.4)',
+                            boxShadow: '0 0 8px rgba(var(--neon-purple-rgb), 0.4)',
                           }}
                         >
                           <span className="inline-flex items-center gap-2">
@@ -268,8 +268,8 @@ export default function UsersPage() {
             className="card-vapor neon-border max-w-md w-full p-6 rounded-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'linear-gradient(135deg, rgba(10, 5, 30, 0.98) 0%, rgba(26, 10, 46, 0.95) 100%)',
-              border: '2px solid rgba(255, 16, 240, 0.5)',
+              background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
+              border: '2px solid rgba(var(--neon-pink-rgb), 0.5)',
             }}
           >
             <h2 className="text-2xl font-bold neon-text mb-6 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
@@ -281,7 +281,7 @@ export default function UsersPage() {
               <p className="text-sm font-mono mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Changing password for:
               </p>
-              <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'rgba(0, 255, 255, 0.1)' }}>
+              <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'rgba(var(--neon-cyan-rgb), 0.1)' }}>
                 <span className="font-bold text-lg" style={{ color: 'var(--neon-cyan)' }}>
                   {changePasswordUser.username}
                 </span>
@@ -312,9 +312,9 @@ export default function UsersPage() {
                 onClick={() => setChangePasswordUser(null)}
                 className="flex-1 px-4 py-3 rounded-xl font-bold transition-all hover:scale-105"
                 style={{
-                  background: 'rgba(128, 128, 128, 0.2)',
+                  background: 'rgba(var(--text-muted-rgb), 0.2)',
                   color: 'var(--text-secondary)',
-                  border: '2px solid rgba(128, 128, 128, 0.3)',
+                  border: '2px solid rgba(var(--text-muted-rgb), 0.3)',
                 }}
               >
                 Cancel
@@ -326,7 +326,7 @@ export default function UsersPage() {
                 style={{
                   background: 'linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-pink) 100%)',
                   color: 'white',
-                  boxShadow: '0 0 12px rgba(181, 55, 242, 0.4)',
+                  boxShadow: '0 0 12px rgba(var(--neon-purple-rgb), 0.4)',
                 }}
               >
                 {changingPassword ? (

@@ -85,12 +85,12 @@ export default function DebugPage() {
       case 'connected':
       case 'authenticated':
       case 'healthy':
-        return 'text-green-400';
+        return 'text-status-success';
       case 'error':
       case 'unhealthy':
-        return 'text-red-400';
+        return 'text-status-error';
       case 'not_authenticated':
-        return 'text-yellow-400';
+        return 'text-status-warning';
       default:
         return 'text-gray-400';
     }
@@ -124,12 +124,12 @@ export default function DebugPage() {
             <MagnifyingGlass size={28} weight="duotone" />
             DockLite Debug Dashboard
           </h1>
-          <div className="bg-red-900 border border-red-700 rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4 text-red-400 flex items-center gap-2">
+          <div className="bg-status-error/20 border border-status-error/40 rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-4 text-status-error flex items-center gap-2">
               <XCircle size={22} weight="duotone" />
               Error
             </h2>
-            <p className="text-red-300 mb-4">{error}</p>
+            <p className="text-status-error mb-4">{error}</p>
             <button
               onClick={fetchDebugData}
               className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded"
@@ -169,8 +169,8 @@ export default function DebugPage() {
         {/* Overall Status */}
         <div className={`mb-8 p-6 rounded-lg border-2 ${
           data.status === 'healthy' 
-            ? 'bg-green-900 border-green-700' 
-            : 'bg-red-900 border-red-700'
+            ? 'bg-status-success/20 border-status-success/40' 
+            : 'bg-status-error/20 border-status-error/40'
         }`}>
           <div className="flex items-center justify-between">
             <div>
@@ -205,7 +205,7 @@ export default function DebugPage() {
               Status: {data.debug.database.status}
             </p>
             {data.debug.database.error && (
-              <p className="text-red-400 mt-2">
+              <p className="text-status-error mt-2">
                 Error: {data.debug.database.error}
               </p>
             )}
@@ -237,7 +237,7 @@ export default function DebugPage() {
               Status: {data.debug.docker.status}
             </p>
             {data.debug.docker.error && (
-              <p className="text-red-400 mt-2">
+              <p className="text-status-error mt-2">
                 Error: {data.debug.docker.error}
               </p>
             )}
@@ -275,7 +275,7 @@ export default function DebugPage() {
               Status: {data.debug.authentication.status}
             </p>
             {data.debug.authentication.error && (
-              <p className="text-red-400 mt-2">
+              <p className="text-status-error mt-2">
                 Error: {data.debug.authentication.error}
               </p>
             )}
@@ -298,12 +298,12 @@ export default function DebugPage() {
         </div>
 
         {/* Troubleshooting Tips */}
-        <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-6">
-          <h3 className="text-xl font-bold mb-4 text-yellow-400 flex items-center gap-2">
+        <div className="bg-status-warning/20 border border-status-warning/40 rounded-lg p-6">
+          <h3 className="text-xl font-bold mb-4 text-status-warning flex items-center gap-2">
             <Lightbulb size={20} weight="duotone" />
             Troubleshooting Tips
           </h3>
-          <div className="space-y-2 text-yellow-200">
+          <div className="space-y-2 text-status-warning/80">
             <p><strong>Database Issues:</strong> Check if the data/docklite.db file exists and is writable.</p>
             <p><strong>Docker Issues:</strong> Ensure Docker daemon is running and the socket path is correct.</p>
             <p><strong>Authentication Issues:</strong> Try logging in at /login - default credentials are admin/admin.</p>

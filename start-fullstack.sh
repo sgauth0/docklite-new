@@ -19,6 +19,29 @@ DOCKLITE_TOKEN="${DOCKLITE_TOKEN:-}"
 AGENT_PORT="${AGENT_PORT:-3000}"
 GUI_PORT="${GUI_PORT:-3001}"
 
+# Kill any existing processes on the target ports
+for port in $AGENT_PORT $GUI_PORT; do
+    existing_pid=$(sudo lsof -ti :$port 2>/dev/null || true)
+    if [ -n "$existing_pid" ]; then
+        echo -e "${YELLOW}Killing existing process on port $port (PID: $existing_pid)...${NC}"
+        sudo kill $existing_pid 2>/dev/null || true
+        sleep 1
+    fi
+done
+
+# Also kill tracked PIDs from previous runs
+for pidfile in .docklite-gui.pid .docklite-agent.pid; do
+    if [ -f "$pidfile" ]; then
+        old_pid=$(cat "$pidfile" 2>/dev/null)
+        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+            echo -e "${YELLOW}Killing previous process (PID: $old_pid)...${NC}"
+            kill "$old_pid" 2>/dev/null || true
+        fi
+        rm -f "$pidfile"
+    fi
+done
+sleep 1
+
 # Check if binaries exist
 if [ ! -f "./bin/docklite-agent" ]; then
     echo -e "${RED}Error: docklite-agent binary not found${NC}"
@@ -100,39 +123,6 @@ cd ..
 
 echo -e "${GREEN}✓ GUI started (PID: $GUI_PID)${NC}"
 echo -e "${BLUE}Waiting for GUI to initialize database...${NC}"
-
-# Wait for GUI to initialize database (check for tokens table)
-MAX_WAIT=30
-WAITED=0
-while [ $WAITED -lt $MAX_WAIT ]; do
-    # Check if GUI is still running
-    if ! kill -0 $GUI_PID 2>/dev/null; then
-        echo -e "${RED}✗ GUI failed to start${NC}"
-        echo "Check logs/nextjs.log for errors"
-        exit 1
-    fi
-
-    # Check if database tables have been created using Node.js (no sqlite3 CLI needed)
-    if [ -f "$DATABASE_PATH" ]; then
-        if DATABASE_PATH="$DATABASE_PATH" node check-db.js >/dev/null 2>&1; then
-            echo -e "${GREEN}✓ Database initialized${NC}"
-            break
-        fi
-    fi
-
-    sleep 1
-    WAITED=$((WAITED + 1))
-
-    if [ $((WAITED % 5)) -eq 0 ]; then
-        echo -e "${YELLOW}  Still waiting... (${WAITED}s)${NC}"
-    fi
-done
-
-if [ $WAITED -eq $MAX_WAIT ]; then
-    echo -e "${YELLOW}⚠ Timeout waiting for database initialization${NC}"
-    echo "Proceeding anyway - agent may fail if migrations haven't completed"
-    sleep 2
-fi
 
 # Start Agent
 echo -e "${GREEN}Starting Agent on port $AGENT_PORT...${NC}"

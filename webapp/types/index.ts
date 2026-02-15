@@ -47,15 +47,19 @@ export interface CreateSiteParams {
 export interface Database {
   id: number;
   name: string;
+  type: 'postgres' | 'sqlite';
   container_id: string;
   postgres_port: number;
+  db_path?: string;
   created_at: string;
 }
 
 export interface CreateDatabaseParams {
   name: string;
+  type: 'postgres' | 'sqlite';
   container_id: string;
   postgres_port: number;
+  db_path?: string;
 }
 
 // Permission types

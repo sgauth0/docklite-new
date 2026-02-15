@@ -334,8 +334,7 @@ function ConfigTab({ config, onSave, loading }: any) {
             Status: {config?.hasToken ? (
               <span className="text-neon-green">✓ Configured</span>
             ) : (
-              <span className="text-yellow-500 flex items-center gap-2">
-                <WarningCircle size={14} weight="duotone" />
+                                <span className="text-status-warning flex items-center gap-2">                <WarningCircle size={14} weight="duotone" />
                 Not configured
               </span>
             )}
@@ -419,7 +418,7 @@ function ZonesTab({ zones, onAddZone, onDeleteZone }: any) {
               <button
                 onClick={() => onDeleteZone(zone.id, zone.domain)}
                 className="cyber-button-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
-                style={{ color: '#ff6b6b' }}
+                style={{ color: 'var(--status-error)' }}
               >
                 Delete
               </button>
@@ -455,9 +454,9 @@ function RecordsTab({ records, zones, selectedZone, onZoneChange, onAddRecord, o
           <div
             className="px-4 py-2 rounded-lg text-sm font-bold"
             style={{
-              background: 'rgba(255, 165, 0, 0.1)',
-              border: '1px solid rgba(255, 165, 0, 0.3)',
-              color: '#ffa500',
+              background: 'rgba(var(--status-warning-rgb), 0.1)',
+              border: '1px solid rgba(var(--status-warning-rgb), 0.3)',
+              color: 'var(--status-warning)',
             }}
           >
             <span className="inline-flex items-center gap-2">
@@ -518,7 +517,7 @@ function RecordsTab({ records, zones, selectedZone, onZoneChange, onAddRecord, o
                 <button
                   onClick={() => onDeleteRecord(record.id, record.name, record.type)}
                   className="cyber-button-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
-                  style={{ color: '#ff6b6b' }}
+                  style={{ color: 'var(--status-error)' }}
                 >
                   Delete
                 </button>

@@ -70,9 +70,9 @@ export default function CreateUserPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="rounded-lg p-4 font-bold" style={{
-              background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 16, 240, 0.2) 100%)',
-              border: '2px solid rgba(255, 107, 107, 0.5)',
-              color: '#ff6b6b'
+              background: 'linear-gradient(135deg, rgba(var(--status-error-rgb), 0.2) 0%, rgba(var(--neon-pink-rgb), 0.2) 100%)',
+              border: '2px solid rgba(var(--status-error-rgb), 0.5)',
+              color: 'var(--status-error)'
             }}>
               <span className="inline-flex items-center gap-2">
                 <XCircle size={18} weight="duotone" />
@@ -133,7 +133,7 @@ export default function CreateUserPage() {
             />
           </div>
 
-          <div className="flex items-center gap-3 p-4 rounded-lg" style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid rgba(255, 215, 0, 0.3)' }}>
+          <div className="flex items-center gap-3 p-4 rounded-lg" style={{ background: 'rgba(var(--status-warning-rgb), 0.1)', border: '1px solid rgba(var(--status-warning-rgb), 0.3)' }}>
             <input
               type="checkbox"
               id="isAdmin"
@@ -152,9 +152,9 @@ export default function CreateUserPage() {
               href="/users"
               className="px-6 py-3 rounded-xl font-bold transition-all hover:scale-105"
               style={{
-                background: 'rgba(128, 128, 128, 0.2)',
+                background: 'rgba(var(--text-muted-rgb), 0.2)',
                 color: 'var(--text-secondary)',
-                border: '2px solid rgba(128, 128, 128, 0.3)'
+                border: '2px solid rgba(var(--text-muted-rgb), 0.3)'
               }}
             >
               Cancel

@@ -127,7 +127,7 @@ export default function DbViewer() {
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
+                    background: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
                     color: 'white',
                   }}
                 >
@@ -151,8 +151,8 @@ export default function DbViewer() {
               )}
 
               {error && (
-                <div className="card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(255, 107, 107, 0.5)' }}>
-                  <p className="font-bold flex items-center gap-2" style={{ color: '#ff6b6b' }}>
+                <div className="card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(var(--status-error-rgb), 0.5)' }}>
+                  <p className="font-bold flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
                     <XCircle size={16} weight="duotone" />
                     Error: {error}
                   </p>
@@ -185,7 +185,7 @@ export default function DbViewer() {
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-b-2" style={{ borderColor: 'rgba(181, 55, 242, 0.3)' }}>
+                              <tr className="border-b-2" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
                                 {visibleColumns.map((col: any) => (
                                   <th
                                     key={col.name}
@@ -214,7 +214,7 @@ export default function DbViewer() {
                                   <tr
                                     key={i}
                                     className="border-b transition-colors hover:bg-purple-900/20"
-                                    style={{ borderColor: 'rgba(181, 55, 242, 0.1)' }}
+                                    style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.1)' }}
                                   >
                                     {visibleColumns.map((col: any) => (
                                       <td

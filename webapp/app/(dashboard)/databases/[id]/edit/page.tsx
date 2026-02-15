@@ -342,7 +342,7 @@ export default function DatabaseEditPage() {
   if (!dbId) {
     return (
       <div className="card-vapor p-8 max-w-xl">
-        <h1 className="text-xl font-bold" style={{ color: '#ff6b6b' }}>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--status-error)' }}>
           Missing database ID
         </h1>
       </div>
@@ -352,7 +352,7 @@ export default function DatabaseEditPage() {
   if (!auth) {
     return (
       <div className="max-w-xl card-vapor p-8">
-        <h1 className="text-xl font-bold mb-3" style={{ color: '#ff6b6b' }}>
+        <h1 className="text-xl font-bold mb-3" style={{ color: 'var(--status-error)' }}>
           Missing database credentials
         </h1>
         <p className="text-sm font-mono mb-6" style={{ color: 'var(--text-secondary)' }}>
@@ -386,8 +386,8 @@ export default function DatabaseEditPage() {
               <div
                 className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono"
                 style={{
-                  background: 'rgba(0, 255, 255, 0.1)',
-                  border: '1px solid rgba(0, 255, 255, 0.4)',
+                  background: 'rgba(var(--neon-cyan-rgb), 0.1)',
+                  border: '1px solid rgba(var(--neon-cyan-rgb), 0.4)',
                   color: 'var(--neon-cyan)',
                 }}
               >
@@ -422,10 +422,10 @@ export default function DatabaseEditPage() {
             style={{
               background: activeTab === 'rows'
                 ? 'linear-gradient(135deg, var(--neon-pink) 0%, var(--neon-purple) 100%)'
-                : 'rgba(255, 255, 255, 0.05)',
+                : 'rgba(var(--text-muted-rgb), 0.05)',
               color: activeTab === 'rows' ? 'white' : 'var(--text-secondary)',
               border: activeTab === 'rows' ? '2px solid var(--neon-pink)' : '2px solid transparent',
-              boxShadow: activeTab === 'rows' ? '0 0 12px rgba(255, 16, 240, 0.4)' : 'none',
+              boxShadow: activeTab === 'rows' ? '0 0 12px rgba(var(--neon-pink-rgb), 0.4)' : 'none',
             }}
           >
             📊 Rows
@@ -437,10 +437,10 @@ export default function DatabaseEditPage() {
             style={{
               background: activeTab === 'query'
                 ? 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-green) 100%)'
-                : 'rgba(255, 255, 255, 0.05)',
+                : 'rgba(var(--text-muted-rgb), 0.05)',
               color: activeTab === 'query' ? 'white' : 'var(--text-secondary)',
               border: activeTab === 'query' ? '2px solid var(--neon-cyan)' : '2px solid transparent',
-              boxShadow: activeTab === 'query' ? '0 0 12px rgba(0, 255, 255, 0.3)' : 'none',
+              boxShadow: activeTab === 'query' ? '0 0 12px rgba(var(--neon-cyan-rgb), 0.3)' : 'none',
             }}
           >
             ⚡ Query
@@ -451,11 +451,11 @@ export default function DatabaseEditPage() {
             className="px-4 py-2 rounded-lg text-sm font-bold transition-all"
             style={{
               background: activeTab === 'structure'
-                ? 'linear-gradient(135deg, #5f8bff 0%, var(--neon-purple) 100%)'
-                : 'rgba(255, 255, 255, 0.05)',
+                ? 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)'
+                : 'rgba(var(--text-muted-rgb), 0.05)',
               color: activeTab === 'structure' ? 'white' : 'var(--text-secondary)',
-              border: activeTab === 'structure' ? '2px solid #5f8bff' : '2px solid transparent',
-              boxShadow: activeTab === 'structure' ? '0 0 12px rgba(95, 139, 255, 0.35)' : 'none',
+              border: activeTab === 'structure' ? '2px solid var(--neon-cyan)' : '2px solid transparent',
+              boxShadow: activeTab === 'structure' ? '0 0 12px rgba(var(--neon-cyan-rgb), 0.35)' : 'none',
             }}
           >
             🏗️ Structure
@@ -483,10 +483,10 @@ export default function DatabaseEditPage() {
                 onClick={handleEnableEdit}
                 className="px-4 py-2 text-sm font-bold rounded-lg transition-all animate-pulse"
                 style={{
-                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ff1744 100%)',
-                  border: '3px solid #ff1744',
+                  background: 'linear-gradient(135deg, var(--status-error) 0%, var(--status-error-strong) 100%)',
+                  border: '3px solid var(--status-error-strong)',
                   color: 'white',
-                  boxShadow: '0 0 16px rgba(255, 23, 68, 0.55)',
+                  boxShadow: '0 0 16px rgba(var(--status-error-strong-rgb), 0.55)',
                 }}
               >
                 🔓 Enable Edit Mode
@@ -500,8 +500,8 @@ export default function DatabaseEditPage() {
                   disabled={savingRows}
                   className="px-4 py-2 text-sm font-bold rounded-lg transition-all disabled:opacity-50"
                   style={{
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ff1744 100%)',
-                    border: '2px solid #ff1744',
+                    background: 'linear-gradient(135deg, var(--status-error) 0%, var(--status-error-strong) 100%)',
+                    border: '2px solid var(--status-error-strong)',
                     color: 'white',
                   }}
                 >
@@ -512,8 +512,8 @@ export default function DatabaseEditPage() {
                   onClick={handleCancel}
                   className="px-4 py-2 text-sm font-bold rounded-lg transition-all"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '2px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(var(--text-muted-rgb), 0.08)',
+                    border: '2px solid rgba(var(--text-muted-rgb), 0.15)',
                     color: 'var(--text-primary)',
                   }}
                 >
@@ -524,8 +524,8 @@ export default function DatabaseEditPage() {
                   onClick={handleCancel}
                   className="px-4 py-2 text-sm font-bold rounded-lg transition-all"
                   style={{
-                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                    border: '2px solid #45a049',
+                    background: 'linear-gradient(135deg, var(--status-success) 0%, var(--status-success) 100%)',
+                    border: '2px solid var(--status-success)',
                     color: 'white',
                   }}
                 >
@@ -542,12 +542,12 @@ export default function DatabaseEditPage() {
             </div>
           )}
           {tableError && (
-            <div className="text-sm font-mono" style={{ color: '#ff6b6b' }}>
+            <div className="text-sm font-mono" style={{ color: 'var(--status-error)' }}>
               {tableError}
             </div>
           )}
           {saveError && (
-            <div className="text-sm font-mono" style={{ color: '#ff6b6b' }}>
+            <div className="text-sm font-mono" style={{ color: 'var(--status-error)' }}>
               {saveError}
             </div>
           )}
@@ -565,9 +565,9 @@ export default function DatabaseEditPage() {
                     key={col.name}
                     className="px-3 py-1 rounded-full text-xs font-mono border"
                     style={{
-                      borderColor: 'rgba(0, 255, 255, 0.4)',
+                      borderColor: 'rgba(var(--neon-cyan-rgb), 0.4)',
                       color: 'var(--neon-cyan)',
-                      background: 'rgba(0, 255, 255, 0.08)',
+                      background: 'rgba(var(--neon-cyan-rgb), 0.08)',
                     }}
                   >
                     {col.name} • {col.type}
@@ -587,7 +587,7 @@ export default function DatabaseEditPage() {
                             className="px-3 py-2 text-left"
                             style={{
                               color: 'var(--neon-purple)',
-                              background: isHighlighted ? 'rgba(0, 255, 255, 0.15)' : 'transparent',
+                              background: isHighlighted ? 'rgba(var(--neon-cyan-rgb), 0.15)' : 'transparent',
                             }}
                           >
                             {col.name}
@@ -615,11 +615,11 @@ export default function DatabaseEditPage() {
                             const isModified = isEditMode && !areValuesEqual(tableData.rows[rowIndex]?.[col.name], row[col.name]);
                             const cellStyle = isModified
                               ? {
-                                  background: 'rgba(255, 200, 0, 0.18)',
-                                  boxShadow: 'inset 0 0 0 1px rgba(255, 200, 0, 0.35)',
+                                  background: 'rgba(var(--status-warning-rgb), 0.18)',
+                                  boxShadow: 'inset 0 0 0 1px rgba(var(--status-warning-rgb), 0.35)',
                                 }
                               : isHighlighted
-                                ? { background: 'rgba(0, 255, 255, 0.12)' }
+                                ? { background: 'rgba(var(--neon-cyan-rgb), 0.12)' }
                                 : {};
 
                             return (
@@ -631,8 +631,8 @@ export default function DatabaseEditPage() {
                                     onChange={(e) => handleCellEdit(rowIndex, col.name, col.type, e.target.value)}
                                     className="w-full px-2 py-1 text-xs rounded-md"
                                     style={{
-                                      background: 'rgba(15, 5, 30, 0.7)',
-                                      border: '1px solid rgba(181, 55, 242, 0.4)',
+                                      background: 'var(--surface-muted)',
+                                      border: '1px solid rgba(var(--neon-purple-rgb), 0.4)',
                                       color: 'var(--text-primary)',
                                     }}
                                   />
@@ -666,7 +666,7 @@ export default function DatabaseEditPage() {
           <textarea
             className="w-full min-h-[200px] p-3 rounded-lg text-xs font-mono"
             style={{
-              background: 'rgba(15, 5, 30, 0.7)',
+              background: 'var(--surface-muted)',
               border: '2px solid var(--neon-purple)',
               color: 'var(--text-primary)',
             }}
@@ -693,7 +693,7 @@ export default function DatabaseEditPage() {
           </button>
 
           {queryError && (
-            <div className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
+            <div className="text-xs font-mono" style={{ color: 'var(--status-error)' }}>
               {queryError}
             </div>
           )}
@@ -767,7 +767,7 @@ export default function DatabaseEditPage() {
           )}
 
           {schemaError && (
-            <div className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
+            <div className="text-xs font-mono" style={{ color: 'var(--status-error)' }}>
               {schemaError}
             </div>
           )}

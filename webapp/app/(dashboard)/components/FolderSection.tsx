@@ -132,16 +132,16 @@ export default function FolderSection({
           </span>
           <span className="transition-transform group-hover:scale-110">
             {isCollapsed ? (
-              <FolderIcon size={32} weight="duotone" color="#d90fd9" />
+              <FolderIcon size={32} weight="duotone" color="var(--neon-pink)" />
             ) : (
-              <FolderOpen size={32} weight="duotone" color="#d90fd9" />
+              <FolderOpen size={32} weight="duotone" color="var(--neon-pink)" />
             )}
           </span>
           <h2 className="text-2xl font-bold neon-text transition-all group-hover:brightness-125" style={{ color: 'var(--neon-pink)' }}>
             {folder.name}
           </h2>
           <span className="text-sm font-mono px-2 py-1 rounded-full" style={{
-            background: 'rgba(217, 15, 217, 0.2)',
+            background: 'rgba(var(--neon-pink-rgb), 0.2)',
             color: 'var(--neon-pink)',
             border: '1px solid var(--neon-pink)'
           }}>
@@ -157,7 +157,7 @@ export default function FolderSection({
                 onClick={() => onAddSubfolder(folder.id, folder.name)}
                 className="px-3 py-1 text-xs font-bold rounded-lg transition-all hover:scale-105 flex items-center gap-1"
                 style={{
-                  background: 'rgba(0, 255, 255, 0.1)',
+                  background: 'rgba(var(--neon-cyan-rgb), 0.1)',
                   border: '1px solid var(--neon-cyan)',
                   color: 'var(--neon-cyan)'
                 }}
@@ -169,7 +169,7 @@ export default function FolderSection({
             <button
               className="px-3 py-1 text-xs font-bold rounded-lg transition-all hover:scale-105 flex items-center gap-1"
               style={{
-                background: 'rgba(255, 16, 240, 0.1)',
+                background: 'rgba(var(--neon-pink-rgb), 0.1)',
                 border: '1px solid var(--neon-pink)',
                 color: 'var(--neon-pink)'
               }}
@@ -181,9 +181,9 @@ export default function FolderSection({
               onClick={() => onDeleteFolder && onDeleteFolder(folder.id, folder.name)}
               className="px-3 py-1 text-xs font-bold rounded-lg transition-all hover:scale-105 flex items-center gap-1"
               style={{
-                background: 'rgba(255, 107, 107, 0.1)',
-                border: '1px solid #ff6b6b',
-                color: '#ff6b6b'
+                background: 'rgba(var(--status-error-rgb), 0.1)',
+                border: '1px solid var(--status-error)',
+                color: 'var(--status-error)'
               }}
             >
               <Trash size={14} weight="duotone" />

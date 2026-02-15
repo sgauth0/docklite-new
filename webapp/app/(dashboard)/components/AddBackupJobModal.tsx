@@ -65,11 +65,15 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
 
   const loadDatabases = async () => {
     try {
-      const res = await fetch('/api/databases');
+      const res = await fetch('/api/databases/stats');
       const data = await res.json();
-      setDatabases(data.databases || []);
-      if (data.databases?.length > 0) {
-        setTargetId((current) => (current === '' ? data.databases[0].id : current));
+      const normalized = (data.databases || []).map((db: any) => ({
+        id: Number(db.id),
+        name: db.name,
+      }));
+      setDatabases(normalized);
+      if (normalized.length > 0) {
+        setTargetId((current) => (current === '' ? normalized[0].id : current));
       }
     } catch (err) {
       console.error('Error loading databases:', err);
@@ -144,25 +148,25 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
       <div
         className="card-vapor max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto"
         style={{
-          background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.98) 0%, rgba(10, 5, 30, 0.98) 100%)',
-          border: '2px solid var(--neon-purple)',
-          boxShadow: '0 0 30px rgba(181, 55, 242, 0.5)',
+          background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
+          border: '2px solid var(--modal-border)',
+          boxShadow: '0 0 30px var(--modal-shadow)',
         }}
       >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-lg transition-all hover:scale-110"
           style={{
-            background: 'rgba(255, 107, 107, 0.2)',
-            border: '1px solid #ff6b6b',
+            background: 'rgba(var(--status-error-rgb), 0.2)',
+            border: '1px solid var(--status-error)',
           }}
         >
-          <X size={20} color="#ff6b6b" weight="bold" />
+          <X size={20} color="var(--status-error)" weight="bold" />
         </button>
 
         <div className="mb-6">
           <h2 className="text-2xl font-bold neon-text flex items-center gap-3" style={{ color: 'var(--neon-cyan)' }}>
-            <ClockCounterClockwise size={32} weight="duotone" color="#00e863" />
+            <ClockCounterClockwise size={32} weight="duotone" color="var(--status-success)" />
             {mode === 'edit' ? 'Edit Schedule' : 'Create Schedule'}
           </h2>
           <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -174,9 +178,9 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
           <div
             className="mb-4 p-3 rounded-lg border"
             style={{
-              background: 'rgba(255, 107, 107, 0.1)',
-              border: '1px solid #ff6b6b',
-              color: '#ff6b6b',
+              background: 'rgba(var(--status-error-rgb), 0.1)',
+              border: '1px solid var(--status-error)',
+              color: 'var(--status-error)',
             }}
           >
             {error}
@@ -202,7 +206,7 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
               ))}
             </select>
             {destinations.length === 0 && (
-              <p className="text-xs mt-1 flex items-center gap-2" style={{ color: '#ffa500' }}>
+              <p className="text-xs mt-1 flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
                 <WarningCircle size={14} weight="duotone" />
                 No destinations configured. A local destination will be used automatically.
               </p>
@@ -325,7 +329,7 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(0, 232, 99, 0.1)' }}>
+          <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(var(--status-success-rgb), 0.1)' }}>
             <input
               type="checkbox"
               id="enabled"
@@ -346,8 +350,8 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
               disabled={loading}
               className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(var(--text-muted-rgb), 0.1)',
+                border: '1px solid rgba(var(--text-muted-rgb), 0.2)',
                 color: 'var(--text-secondary)',
               }}
             >
@@ -360,7 +364,7 @@ export default function AddBackupJobModal({ destinations, onClose, onSuccess, in
               style={{
                 background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
                 color: 'white',
-                boxShadow: '0 0 20px rgba(0, 232, 99, 0.4)',
+                boxShadow: '0 0 20px rgba(var(--status-success-rgb), 0.4)',
               }}
             >
               {loading ? (mode === 'edit' ? 'Saving...' : 'Creating...') : (mode === 'edit' ? 'Save Schedule' : 'Create Schedule')}

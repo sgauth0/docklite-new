@@ -40,7 +40,7 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 			if db.ID != "" && db.Password != "" {
 				dockerPasswords[db.ID] = db.Password
 			}
-			_, _ = h.store.UpsertDatabase(db.Name, db.ID, db.Port)
+			_, _ = h.store.UpsertDatabase(db.Name, "postgres", db.ID, db.Port, "")
 		}
 	}
 
@@ -81,33 +81,39 @@ func (h *Handlers) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 		sizeCategory := "empty"
 
 		if database.ContainerID != "" {
-			query := fmt.Sprintf("SELECT pg_database_size('%s')", database.Name)
-			dockerCtx, dockerCancel := dockerContext(r.Context())
-			dbUser := dockerUsers[database.ContainerID]
-			dbPassword := dockerPasswords[database.ContainerID]
-			if dbUser != "" && dbPassword != "" {
-				output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, dbUser, database.Name, dbPassword, query, false)
-				if err == nil {
-					if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(output), 10, 64); parseErr == nil {
-						size = parsed
-						switch {
-						case size == 0:
-							sizeCategory = "empty"
-						case size < 1024*1024:
-							sizeCategory = "tiny"
-						case size < 10*1024*1024:
-							sizeCategory = "small"
-						case size < 100*1024*1024:
-							sizeCategory = "medium"
-						case size < 1024*1024*1024:
-							sizeCategory = "large"
-						default:
-							sizeCategory = "huge"
+			if database.Type == "sqlite" {
+				// TODO: Implement size check for SQLite file in container
+				size = 0
+				sizeCategory = "unknown"
+			} else {
+				query := fmt.Sprintf("SELECT pg_database_size('%s')", database.Name)
+				dockerCtx, dockerCancel := dockerContext(r.Context())
+				dbUser := dockerUsers[database.ContainerID]
+				dbPassword := dockerPasswords[database.ContainerID]
+				if dbUser != "" && dbPassword != "" {
+					output, err := h.docker.ExecPostgres(dockerCtx, database.ContainerID, dbUser, database.Name, dbPassword, query, false)
+					if err == nil {
+						if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(output), 10, 64); parseErr == nil {
+							size = parsed
+							switch {
+							case size == 0:
+								sizeCategory = "empty"
+							case size < 1024*1024:
+								sizeCategory = "tiny"
+							case size < 10*1024*1024:
+								sizeCategory = "small"
+							case size < 100*1024*1024:
+								sizeCategory = "medium"
+							case size < 1024*1024*1024:
+								sizeCategory = "large"
+							default:
+								sizeCategory = "huge"
+							}
 						}
 					}
 				}
+				dockerCancel()
 			}
-			dockerCancel()
 		}
 
 		withSize = append(withSize, map[string]any{

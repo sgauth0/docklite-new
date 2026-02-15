@@ -22,6 +22,18 @@ export default function AppearanceSettingsPage() {
       description: 'Clean greys with soft pink accents',
       preview: 'bg-gradient-to-br from-gray-100 via-gray-200 to-pink-200',
     },
+    {
+      id: 'corpo-blue',
+      name: 'Corpo Blue',
+      description: 'Clean greys with cool blue accents',
+      preview: 'theme-preview-corpo-blue',
+    },
+    {
+      id: 'unicorn',
+      name: 'Unicorn',
+      description: 'Spectrum palette with DockLite brand colors',
+      preview: 'theme-preview-unicorn',
+    },
   ];
 
   const fontSizes = [
@@ -36,7 +48,12 @@ export default function AppearanceSettingsPage() {
   };
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('docklite-theme') || 'cyberpunk';
+    let savedTheme = localStorage.getItem('docklite-theme') || 'cyberpunk';
+    // Migrate old 'new' theme to 'unicorn'
+    if (savedTheme === 'new') {
+      savedTheme = 'unicorn';
+      localStorage.setItem('docklite-theme', 'unicorn');
+    }
     setTheme(savedTheme);
     applyTheme(savedTheme);
   }, []);
@@ -71,11 +88,13 @@ export default function AppearanceSettingsPage() {
           {themes.map((themeOption) => (
             <div
               key={themeOption.id}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                theme === themeOption.id 
-                  ? 'border-cyan-500 bg-cyan-500/10' 
-                  : 'border-purple-500/20 hover:border-purple-500/40'
-              }`}
+              className="p-4 rounded-lg border-2 cursor-pointer transition-all"
+              style={theme === themeOption.id ? {
+                borderColor: 'var(--neon-cyan)',
+                background: 'rgba(var(--neon-cyan-rgb), 0.1)'
+              } : {
+                borderColor: 'rgba(var(--neon-purple-rgb), 0.2)'
+              }}
               onClick={() => {
                 setTheme(themeOption.id);
                 applyTheme(themeOption.id);
@@ -103,11 +122,13 @@ export default function AppearanceSettingsPage() {
                 <button
                   key={size.id}
                   onClick={() => setFontSize(size.id)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    fontSize === size.id
-                      ? 'border-cyan-500 bg-cyan-500/10'
-                      : 'border-purple-500/20 hover:border-purple-500/40'
-                  }`}
+                  className="p-3 rounded-lg border-2 transition-all"
+                  style={fontSize === size.id ? {
+                    borderColor: 'var(--neon-cyan)',
+                    background: 'rgba(var(--neon-cyan-rgb), 0.1)'
+                  } : {
+                    borderColor: 'rgba(var(--neon-purple-rgb), 0.2)'
+                  }}
                 >
                   <div className="font-bold" style={{ fontSize: size.size }}>Aa</div>
                   <div className="text-xs mt-1">{size.name}</div>
@@ -130,13 +151,16 @@ export default function AppearanceSettingsPage() {
               <div className="font-bold">Animations & Transitions</div>
               <div className="text-sm opacity-70">Enable smooth animations and hover effects</div>
             </div>
-            <button 
+            <button
               onClick={() => setAnimations(!animations)}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                animations 
-                  ? 'bg-green-500 text-black' 
-                  : 'bg-gray-600 text-white'
-              }`}
+              className="px-4 py-2 rounded-lg font-bold transition-all"
+              style={animations ? {
+                background: 'var(--status-success)',
+                color: 'var(--button-text)'
+              } : {
+                background: 'var(--surface-dim)',
+                color: 'var(--text-primary)'
+              }}
             >
               {animations ? 'ON' : 'OFF'}
             </button>
@@ -151,7 +175,8 @@ export default function AppearanceSettingsPage() {
                 max="200"
                 value={neonIntensity}
                 onChange={(e) => setNeonIntensity(Number(e.target.value))}
-                className="flex-1 h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer"
+                className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ background: 'var(--neon-purple)' }}
               />
               <span className="text-sm font-mono w-12">{neonIntensity}%</span>
             </div>
@@ -168,7 +193,10 @@ export default function AppearanceSettingsPage() {
           <Eye size={20} weight="duotone" />
           Preview
         </h2>
-        <div className="p-6 rounded-lg border-2 border-purple-500/30" style={{ filter: `brightness(${neonIntensity / 100})` }}>
+        <div className="p-6 rounded-lg border-2" style={{
+          borderColor: 'rgba(var(--neon-purple-rgb), 0.3)',
+          filter: `brightness(${neonIntensity / 100})`
+        }}>
           <div className="text-center mb-4">
             <div className="flex justify-center mb-2 animate-float">
               <Package size={32} weight="duotone" color="var(--neon-cyan)" />
@@ -181,13 +209,13 @@ export default function AppearanceSettingsPage() {
             </div>
           </div>
           <div className="flex gap-2 justify-center">
-            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: 'var(--neon-green)', color: 'var(--bg-darker)' }}>
+            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: 'var(--neon-green)', color: 'var(--button-text)' }}>
               START
             </button>
-            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: 'var(--neon-purple)', color: 'white' }}>
+            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: 'var(--neon-purple)', color: 'var(--button-text)' }}>
               VIEW
             </button>
-            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: '#ff6b6b', color: 'white' }}>
+            <button className="px-3 py-1 rounded text-sm font-bold" style={{ background: 'var(--status-error)', color: 'var(--button-text)' }}>
               STOP
             </button>
           </div>

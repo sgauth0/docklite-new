@@ -113,9 +113,9 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
       <div
         className="card-vapor max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto"
         style={{
-          background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.98) 0%, rgba(10, 5, 30, 0.98) 100%)',
+          background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
           border: '2px solid var(--neon-purple)',
-          boxShadow: '0 0 30px rgba(181, 55, 242, 0.5)',
+          boxShadow: '0 0 30px rgba(var(--neon-purple-rgb), 0.5)',
         }}
       >
         {/* Close button */}
@@ -123,17 +123,17 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-lg transition-all hover:scale-110"
           style={{
-            background: 'rgba(255, 107, 107, 0.2)',
-            border: '1px solid #ff6b6b',
+            background: 'rgba(var(--status-error-rgb), 0.2)',
+            border: '1px solid var(--status-error)',
           }}
         >
-          <X size={20} color="#ff6b6b" weight="bold" />
+          <X size={20} color="var(--status-error)" weight="bold" />
         </button>
 
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold neon-text flex items-center gap-3" style={{ color: 'var(--neon-cyan)' }}>
-            <Globe size={32} weight="duotone" color="#00e863" />
+            <Globe size={32} weight="duotone" color="var(--status-success)" />
             Add DNS Record
           </h2>
           <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -145,9 +145,9 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
           <div
             className="mb-4 p-3 rounded-lg border"
             style={{
-              background: 'rgba(255, 107, 107, 0.1)',
-              border: '1px solid #ff6b6b',
-              color: '#ff6b6b',
+              background: 'rgba(var(--status-error-rgb), 0.1)',
+              border: '1px solid var(--status-error)',
+              color: 'var(--status-error)',
             }}
           >
             {error}
@@ -289,7 +289,7 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
 
           {/* Proxied (for A/AAAA/CNAME) */}
           {showProxied && (
-            <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(255, 165, 0, 0.1)' }}>
+            <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(var(--status-warning-rgb), 0.1)' }}>
               <input
                 type="checkbox"
                 id="proxied"
@@ -299,7 +299,7 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
                 disabled={loading}
               />
               <div className="flex-1">
-                <label htmlFor="proxied" className="text-sm font-bold flex items-center gap-2" style={{ color: '#ffa500' }}>
+                <label htmlFor="proxied" className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
                   <Cloud size={16} weight="duotone" />
                   Proxy through Cloudflare
                 </label>
@@ -317,8 +317,8 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
               disabled={loading}
               className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(var(--text-muted-rgb), 0.1)',
+                border: '1px solid rgba(var(--text-muted-rgb), 0.2)',
                 color: 'var(--text-secondary)',
               }}
             >
@@ -331,7 +331,7 @@ export default function AddDnsRecordModal({ zones, selectedZone, onClose, onSucc
               style={{
                 background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
                 color: 'white',
-                boxShadow: '0 0 20px rgba(0, 232, 99, 0.4)',
+                boxShadow: '0 0 20px rgba(var(--status-success-rgb), 0.4)',
               }}
             >
               {loading ? 'Creating...' : 'Create Record'}

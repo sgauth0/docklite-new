@@ -53,9 +53,9 @@ export default function NotFound() {
               onClick={() => window.history.back()}
               className="px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105 border"
               style={{
-                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderColor: 'rgba(var(--neon-cyan-rgb), 0.5)',
                 color: 'var(--neon-cyan)',
-                background: 'rgba(0, 255, 255, 0.1)'
+                background: 'rgba(var(--neon-cyan-rgb), 0.1)'
               }}
             >
               <span className="inline-flex items-center gap-2">

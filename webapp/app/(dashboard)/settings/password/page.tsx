@@ -68,9 +68,9 @@ export default function ChangePasswordPage() {
             <div
               className="px-4 py-3 rounded-lg text-sm"
               style={{
-                background: 'rgba(255, 107, 107, 0.15)',
-                border: '1px solid rgba(255, 107, 107, 0.5)',
-                color: '#ff6b6b',
+                background: 'rgba(var(--status-error-rgb), 0.15)',
+                border: '1px solid rgba(var(--status-error-rgb), 0.5)',
+                color: 'var(--status-error)',
               }}
             >
               {error}
@@ -81,8 +81,8 @@ export default function ChangePasswordPage() {
             <div
               className="px-4 py-3 rounded-lg text-sm"
               style={{
-                background: 'rgba(57, 255, 20, 0.15)',
-                border: '1px solid rgba(57, 255, 20, 0.5)',
+                background: 'rgba(var(--status-success-rgb), 0.15)',
+                border: '1px solid rgba(var(--status-success-rgb), 0.5)',
                 color: 'var(--neon-green)',
               }}
             >

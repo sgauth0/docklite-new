@@ -51,21 +51,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center retro-grid">
-      <div className="max-w-md w-full space-y-8 p-10 card-vapor neon-border">
+      <div className="max-w-md w-full space-y-8 p-10 card-vapor neon-border login-card">
         <div className="text-center">
-          <h2 className="text-5xl font-bold neon-text mb-2 flex items-center justify-center gap-3" style={{ color: 'var(--neon-cyan)' }}>
+          <h2 className="text-5xl font-bold neon-text mb-2 flex items-center justify-center gap-3">
             <Lightning size={32} weight="duotone" />
-            DockLite
+            <span className="docklite-logo-dock">Dock</span>
+            <span className="docklite-logo-lite">Lite</span>
             <Sparkle size={26} weight="duotone" />
           </h2>
-          <p className="text-lg font-bold flex items-center justify-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+          <p className="text-lg font-bold flex items-center justify-center gap-2" style={{ color: 'var(--text-primary)' }}>
             <Sparkle size={18} weight="duotone" />
             Docker Control Panel
             <Database size={18} weight="duotone" />
           </p>
-          <div className="mt-4 text-xs" style={{ color: 'var(--neon-purple)' }}>
-            ▸ CYBER KAWAII EDITION ◂
-          </div>
         </div>
 
         <form
@@ -76,9 +74,9 @@ export default function LoginPage() {
         >
           {error && (
             <div className="rounded-lg p-4 font-bold text-center" style={{
-              background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 16, 240, 0.2) 100%)',
-              border: '2px solid rgba(255, 107, 107, 0.5)',
-              color: '#ff6b6b'
+              background: 'linear-gradient(135deg, rgba(var(--status-error-rgb), 0.2) 0%, rgba(var(--neon-pink-rgb), 0.2) 100%)',
+              border: '2px solid rgba(var(--status-error-rgb), 0.5)',
+              color: 'var(--status-error)'
             }}>
               <span className="inline-flex items-center gap-2">
                 <XCircle size={18} weight="duotone" />
@@ -89,7 +87,7 @@ export default function LoginPage() {
 
           <div className="space-y-5">
             <div>
-              <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <UserCircle size={18} weight="duotone" />
                 USERNAME
               </label>
@@ -102,11 +100,12 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="input-vapor w-full font-mono"
                 placeholder="enter username..."
+                style={{ color: 'var(--text-primary)' }}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+              <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <Lock size={18} weight="duotone" />
                 PASSWORD
               </label>
@@ -119,6 +118,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-vapor w-full font-mono"
                 placeholder="••••••••"
+                style={{ color: 'var(--text-primary)' }}
               />
             </div>
           </div>
@@ -136,12 +136,7 @@ export default function LoginPage() {
             )}
           </button>
 
-          <p className="mt-6 text-center text-xs font-mono flex items-center justify-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-            <Info size={14} weight="duotone" />
-            Default: superadmin / admin
-          </p>
-
-          <div className="mt-4 text-center text-xs font-mono" style={{ color: 'var(--neon-purple)' }}>
+          <div className="mt-4 text-center text-xs font-mono" style={{ color: 'var(--text-primary)' }}>
             ━━━━━━━━━━━━━━━━━━━━━━━
             <br />
             <span className="inline-flex items-center gap-2">

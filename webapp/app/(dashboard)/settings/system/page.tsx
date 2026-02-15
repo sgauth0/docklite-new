@@ -115,7 +115,7 @@ export default function SystemSettingsPage() {
                 className="px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: checkingFolders
-                    ? 'rgba(100, 100, 100, 0.3)'
+                    ? 'rgba(var(--text-muted-rgb), 0.3)'
                     : 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
                   color: 'white',
                 }}
@@ -137,12 +137,12 @@ export default function SystemSettingsPage() {
                   className="px-4 py-2 rounded-lg font-mono text-sm"
                   style={{
                     background: folderCheckResult.startsWith('✓')
-                      ? 'rgba(57, 255, 20, 0.2)'
-                      : 'rgba(255, 107, 107, 0.2)',
+                      ? 'rgba(var(--status-success-rgb), 0.2)'
+                      : 'rgba(var(--status-error-rgb), 0.2)',
                     color: folderCheckResult.startsWith('✓')
                       ? 'var(--neon-green)'
-                      : '#ff6b6b',
-                    border: `1px solid ${folderCheckResult.startsWith('✓') ? 'var(--neon-green)' : '#ff6b6b'}`,
+                      : 'var(--status-error)',
+                    border: `1px solid ${folderCheckResult.startsWith('✓') ? 'var(--neon-green)' : 'var(--status-error)'}`,
                   }}
                 >
                   {folderCheckResult}

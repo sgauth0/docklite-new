@@ -24,8 +24,8 @@ export default function ConfirmModal({
   const typeStyles = {
     danger: {
       icon: <WarningCircle size={48} weight="duotone" />,
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
+      color: 'var(--status-error)',
+      gradient: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
     },
     warning: {
       icon: <Lightning size={48} weight="duotone" />,
@@ -80,9 +80,9 @@ export default function ConfirmModal({
             onClick={onCancel}
             className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 border-2"
             style={{
-              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderColor: 'rgba(var(--text-muted-rgb), 0.2)',
               color: 'var(--text-secondary)',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'rgba(var(--text-muted-rgb), 0.05)',
             }}
           >
             {cancelText}

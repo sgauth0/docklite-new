@@ -1,11 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { UserSession } from '@/types';
 import {
-  Lightning,
   Sparkle,
   Database,
   Package,
@@ -76,7 +76,7 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
   }, [isDropdownOpen]);
 
   return (
-    <nav className="card-vapor border-b-2 border-purple-500/30 relative overflow-visible z-[9999]">
+    <nav className="card-vapor border-b-2 relative overflow-visible z-[9999]" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
       {/* Animated background effect */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
@@ -86,36 +86,44 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
         {/* Entire nav constrained to 1024px */}
         <div className="max-w-[1024px] mx-auto">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center flex-1">
+            <div className="flex items-center flex-1 min-w-0 sm:-ml-[150px]">
               <div className="flex-shrink-0 flex items-center gap-2 group">
-                <Lightning
-                  size={34}
-                  weight="duotone"
-                  color="#00e863"
+                <Image
+                  src="/dockliteiconL.png"
+                  alt="DockLite logo"
+                  width={30}
+                  height={30}
                   className="group-hover:scale-110 transition-transform"
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(79, 214, 255, 0.6))' }}
+                  style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-cyan-rgb), 0.6))' }}
                 />
-                <h1 className="text-4xl font-bold neon-text group-hover:scale-105 transition-transform" style={{ color: 'var(--neon-cyan)' }}>
-                  DockLite
+                <h1 className="docklite-logo text-4xl font-bold neon-text group-hover:scale-105 transition-transform">
+                  <span className="docklite-logo-dock">Dock</span>
+                  <span className="docklite-logo-lite">Lite</span>
                 </h1>
                 <Sparkle
                   size={24}
                   weight="duotone"
-                  color="#d90fd9"
+                  color="var(--neon-pink)"
                   className="opacity-70 group-hover:opacity-100 transition-opacity"
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(255, 107, 214, 0.6))' }}
+                  style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-pink-rgb), 0.6))' }}
                 />
               </div>
-              <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
+              <div className="hidden sm:ml-2 sm:-ml-[150px] sm:flex sm:space-x-1 sm:-mr-2">
               <Link
                 href="/"
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
+                className={`inline-flex items-center gap-2 px-3 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
                   isActive('/')
-                    ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
-                    : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
+                    ? 'neon-glow shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
+                style={isActive('/') ? {
+                  background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
+                  color: 'var(--button-text)'
+                } : {
+                  color: 'var(--neon-cyan)'
+                }}
               >
-                <Package size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(79, 214, 255, 0.4))' }} />
+                <Package size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-cyan-rgb), 0.4))' }} />
                 <span>Containers</span>
                 {isActive('/') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
@@ -123,13 +131,19 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               </Link>
               <Link
                 href="/databases"
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
+                className={`inline-flex items-center gap-2 px-3 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
                   isActive('/databases')
-                    ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
-                    : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
+                    ? 'neon-glow shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
+                style={isActive('/databases') ? {
+                  background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
+                  color: 'var(--button-text)'
+                } : {
+                  color: 'var(--neon-cyan)'
+                }}
               >
-                <Database size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(123, 92, 255, 0.4))' }} />
+                <Database size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-purple-rgb), 0.4))' }} />
                 <span>Databases</span>
                 {isActive('/databases') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
@@ -137,13 +151,19 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               </Link>
               <Link
                 href="/backups"
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
+                className={`inline-flex items-center gap-2 px-3 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
                   isActive('/backups')
-                    ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
-                    : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
+                    ? 'neon-glow shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
+                style={isActive('/backups') ? {
+                  background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
+                  color: 'var(--button-text)'
+                } : {
+                  color: 'var(--neon-cyan)'
+                }}
               >
-                <HardDrives size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(107, 255, 176, 0.35))' }} />
+                <HardDrives size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-green-rgb), 0.35))' }} />
                 <span>Backups</span>
                 {isActive('/backups') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
@@ -151,13 +171,19 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               </Link>
               <Link
                 href="/network"
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
+                className={`inline-flex items-center gap-2 px-3 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
                   isActive('/network')
-                    ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
-                    : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
+                    ? 'neon-glow shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
+                style={isActive('/network') ? {
+                  background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
+                  color: 'var(--button-text)'
+                } : {
+                  color: 'var(--neon-cyan)'
+                }}
               >
-                <Globe size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(79, 214, 255, 0.4))' }} />
+                <Globe size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-cyan-rgb), 0.4))' }} />
                 <span>Network</span>
                 {isActive('/network') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
@@ -165,13 +191,19 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               </Link>
               <Link
                 href="/server"
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
+                className={`inline-flex items-center gap-2 px-3 py-3 rounded-xl text-[15px] font-bold transition-all relative overflow-hidden ${
                   isActive('/server')
-                    ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow shadow-lg'
-                    : 'text-cyan-300 hover:text-cyan-100 hover:bg-purple-900/30 hover:shadow-md'
+                    ? 'neon-glow shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
+                style={isActive('/server') ? {
+                  background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
+                  color: 'var(--button-text)'
+                } : {
+                  color: 'var(--neon-cyan)'
+                }}
               >
-                <Gear size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(123, 92, 255, 0.4))' }} />
+                <Gear size={20} weight="duotone" style={{ filter: 'drop-shadow(0 0 6px rgba(var(--neon-purple-rgb), 0.4))' }} />
                 <span>Server</span>
                 {isActive('/server') && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 animate-pulse rounded-xl"></div>
@@ -187,11 +219,10 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className={`flex items-center justify-center p-2 transition-all hover:scale-105 card-vapor rounded-xl border ${
                   isDropdownOpen
-                    ? 'text-pink-100 border-pink-500/60 bg-pink-500/10'
-                    : 'text-pink-300 hover:text-pink-100 border-pink-500/20 hover:border-pink-500/40'
-                }`}
+                                              ? 'text-neon-pink border-neon-pink/60 bg-neon-pink/10'
+                                              : 'text-neon-pink/70 hover:text-neon-pink border-neon-pink/20 hover:border-neon-pink/40'                }`}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl relative" style={{ background: 'rgba(255, 16, 240, 0.2)' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl relative" style={{ background: 'rgba(var(--neon-pink-rgb), 0.2)' }}>
                   <UserCircle size={22} weight="duotone" />
                   {user.role === 'super_admin' ? (
                     <span className="absolute -top-1 -right-1 text-xs">
@@ -208,8 +239,10 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               {isDropdownOpen && (
                 <div
                   ref={dropdownRef}
-                  className="absolute right-0 w-64 bg-gradient-to-br from-purple-900 to-cyan-900 rounded-xl overflow-hidden border-2 border-pink-500 shadow-2xl"
+                  className="absolute right-0 w-64 rounded-xl overflow-hidden border-2 shadow-2xl nav-user-dropdown"
                   style={{
+                    background: 'linear-gradient(135deg, var(--card-bg-1) 0%, var(--card-bg-2) 100%)',
+                    borderColor: 'var(--neon-pink)',
                     position: 'absolute',
                     top: '100%',
                     right: 0,
@@ -217,8 +250,8 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
                     zIndex: 999999,
                   }}
                 >
-                  <div className="p-4 border-b border-purple-500/20">
-                    <div className="font-bold text-cyan-300 flex items-center gap-2">
+                  <div className="p-4 border-b" style={{ borderColor: 'rgba(var(--neon-pink-rgb), 0.3)' }}>
+                    <div className="font-bold flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
                       {user.username}
                       {user.role === 'super_admin' ? (
                         <span className="text-sm flex items-center gap-1">
@@ -231,14 +264,14 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-xs text-purple-300 opacity-70">
+                    <div className="text-xs opacity-70" style={{ color: 'var(--text-secondary)' }}>
                       {user.role === 'super_admin' ? 'Superadmin' : user.isAdmin ? 'Administrator' : 'User'}
                     </div>
                   </div>
                   <div className="py-2">
                     <Link
                       href="/settings"
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-cyan-300 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-cyan-900/50 hover:text-cyan-100 transition-all group"
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all group nav-dropdown-link"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <Gear size={16} weight="duotone" className="group-hover:scale-110 transition-transform" />
@@ -247,7 +280,7 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
                     {user.isAdmin && (
                       <Link
                         href="/settings/users"
-                        className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-cyan-300 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-cyan-900/50 hover:text-cyan-100 transition-all group"
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all group nav-dropdown-link"
                         onClick={() => setIsDropdownOpen(false)}
                       >
                         <UsersThree size={16} weight="duotone" className="group-hover:scale-110 transition-transform" />
@@ -263,9 +296,9 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               onClick={handleLogout}
               className="px-4 py-2 text-sm font-bold rounded-xl transition-all hover:scale-105 flex items-center gap-2"
               style={{
-                background: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
-                color: 'white',
-                boxShadow: '0 0 12px rgba(255, 16, 240, 0.4)'
+                background: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
+                color: 'var(--button-text)',
+                boxShadow: '0 0 12px rgba(var(--neon-pink-rgb), 0.4)'
               }}
             >
               <SignOut size={16} weight="duotone" />
@@ -277,12 +310,12 @@ export default function DashboardNav({ user, terminalOpen, onToggleTerminal }: D
               className="px-4 py-2 text-sm font-bold rounded-xl transition-all hover:scale-105 flex items-center gap-2"
               style={{
                 background: terminalOpen
-                  ? 'linear-gradient(135deg, #00e863 0%, #2dffb5 100%)'
-                  : 'linear-gradient(135deg, #00e863 0%, #00bcd4 100%)',
-                color: '#04130b',
+                  ? 'linear-gradient(135deg, var(--status-success) 0%, var(--status-info) 100%)'
+                  : 'linear-gradient(135deg, var(--status-success) 0%, var(--neon-purple) 100%)',
+                color: 'var(--button-text)',
                 boxShadow: terminalOpen
-                  ? '0 0 18px rgba(45, 255, 181, 0.6)'
-                  : '0 0 12px rgba(0, 232, 99, 0.45)'
+                  ? '0 0 18px rgba(var(--status-info-rgb), 0.6)'
+                  : '0 0 12px rgba(var(--status-success-rgb), 0.45)'
               }}
             >
               <TerminalWindow size={18} weight="duotone" />

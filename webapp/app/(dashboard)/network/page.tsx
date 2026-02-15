@@ -262,7 +262,7 @@ export default function NetworkPage() {
           </p>
         </div>
         {error && (
-          <div className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
+          <div className="text-xs font-mono" style={{ color: 'var(--status-error)' }}>
             {error}
           </div>
         )}
@@ -379,8 +379,8 @@ export default function NetworkPage() {
                     onClick={() => setShowRoutes((prev) => !prev)}
                     className="text-xs font-bold px-3 py-1 rounded-full"
                     style={{
-                      background: 'rgba(0, 255, 255, 0.1)',
-                      border: '1px solid rgba(0, 255, 255, 0.3)',
+                      background: 'rgba(var(--neon-cyan-rgb), 0.1)',
+                      border: '1px solid rgba(var(--neon-cyan-rgb), 0.3)',
                       color: 'var(--neon-cyan)',
                     }}
                   >
@@ -390,7 +390,7 @@ export default function NetworkPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs font-mono">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(181, 55, 242, 0.4)' }}>
+                      <tr style={{ borderBottom: '1px solid rgba(var(--neon-purple-rgb), 0.4)' }}>
                         <th className="text-left py-2">Interface</th>
                         <th className="text-left py-2">Addresses</th>
                         <th className="text-left py-2">DHCP</th>
@@ -437,7 +437,7 @@ export default function NetworkPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs font-mono">
                         <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(181, 55, 242, 0.4)' }}>
+                          <tr style={{ borderBottom: '1px solid rgba(var(--neon-purple-rgb), 0.4)' }}>
                             <th className="text-left py-2">Destination</th>
                             <th className="text-left py-2">Gateway</th>
                             <th className="text-left py-2">Device</th>
@@ -508,19 +508,19 @@ export default function NetworkPage() {
                   <div className="space-y-3 text-sm font-mono">
                     <div className="flex items-center justify-between">
                       <span style={{ color: 'var(--text-secondary)' }}>HTTP :80</span>
-                      <span style={{ color: firewall.httpOpen ? 'var(--neon-green)' : '#ff6b6b' }}>
+                      <span style={{ color: firewall.httpOpen ? 'var(--neon-green)' : 'var(--status-error)' }}>
                         {firewall.httpOpen ? 'Open' : 'Closed'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span style={{ color: 'var(--text-secondary)' }}>HTTPS :443</span>
-                      <span style={{ color: firewall.httpsOpen ? 'var(--neon-green)' : '#ff6b6b' }}>
+                      <span style={{ color: firewall.httpsOpen ? 'var(--neon-green)' : 'var(--status-error)' }}>
                         {firewall.httpsOpen ? 'Open' : 'Closed'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span style={{ color: 'var(--text-secondary)' }}>SSH :22</span>
-                      <span style={{ color: firewall.sshOpen ? 'var(--neon-green)' : '#ff6b6b' }}>
+                      <span style={{ color: firewall.sshOpen ? 'var(--neon-green)' : 'var(--status-error)' }}>
                         {firewall.sshOpen ? 'Open' : 'Closed'}
                       </span>
                     </div>
@@ -539,7 +539,7 @@ export default function NetworkPage() {
                   </div>
                   <div className="mt-3 text-sm">
                     {firewall.otherPorts.length > 0 ? (
-                      <span className="inline-flex items-center gap-2" style={{ color: '#ffa500' }}>
+                      <span className="inline-flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
                         <WarningCircle size={14} weight="duotone" />
                         Review non-standard open ports.
                       </span>
@@ -560,7 +560,7 @@ export default function NetworkPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs font-mono">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(181, 55, 242, 0.4)' }}>
+                      <tr style={{ borderBottom: '1px solid rgba(var(--neon-purple-rgb), 0.4)' }}>
                         <th className="text-left py-2">Port</th>
                         <th className="text-left py-2">Protocol</th>
                         <th className="text-left py-2">Address</th>
@@ -581,7 +581,7 @@ export default function NetworkPage() {
                           <td className="py-2 pr-2">{port.process || '—'}</td>
                           <td className="py-2 pr-2">
                             {port.public ? (
-                              <span style={{ color: '#ff6b6b' }}>Public</span>
+                              <span style={{ color: 'var(--status-error)' }}>Public</span>
                             ) : (
                               <span style={{ color: 'var(--text-secondary)' }}>Local</span>
                             )}
@@ -610,11 +610,11 @@ export default function NetworkPage() {
                           <div className="text-[11px] opacity-70">{container.image}</div>
                         </div>
                         {container.managed ? (
-                          <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'rgba(0,255,255,0.1)', color: 'var(--neon-cyan)' }}>
+                          <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'rgba(var(--neon-cyan-rgb), 0.1)', color: 'var(--neon-cyan)' }}>
                             DockLite managed
                           </span>
                         ) : (
-                          <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'rgba(255,165,0,0.12)', color: '#ffa500' }}>
+                          <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'rgba(var(--status-warning-rgb), 0.12)', color: 'var(--status-warning)' }}>
                             External
                           </span>
                         )}
@@ -625,7 +625,7 @@ export default function NetworkPage() {
                             key={`${container.id}-${index}`}
                             className="text-xs font-mono px-2 py-1 rounded-full"
                             style={{
-                              background: 'rgba(181, 55, 242, 0.15)',
+                              background: 'rgba(var(--neon-purple-rgb), 0.15)',
                               color: 'var(--neon-purple)'
                             }}
                           >
@@ -731,7 +731,7 @@ export default function NetworkPage() {
                     <span
                       key={`${port.hostIp}-${port.hostPort}-${index}`}
                       className="text-xs font-mono px-3 py-1 rounded-full"
-                      style={{ background: 'rgba(0, 255, 255, 0.12)', color: 'var(--neon-cyan)' }}
+                      style={{ background: 'rgba(var(--neon-cyan-rgb), 0.12)', color: 'var(--neon-cyan)' }}
                     >
                       {port.hostIp}:{port.hostPort} → {port.containerPort}/{port.proto}
                     </span>
@@ -798,7 +798,7 @@ export default function NetworkPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs font-mono">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(181, 55, 242, 0.4)' }}>
+                    <tr style={{ borderBottom: '1px solid rgba(var(--neon-purple-rgb), 0.4)' }}>
                       <th className="text-left py-2">Test</th>
                       <th className="text-left py-2">Target</th>
                       <th className="text-left py-2">Status</th>
@@ -818,7 +818,7 @@ export default function NetworkPage() {
                               OK
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1" style={{ color: '#ff6b6b' }}>
+                            <span className="inline-flex items-center gap-1" style={{ color: 'var(--status-error)' }}>
                               <XCircle size={12} weight="duotone" />
                               FAIL
                             </span>

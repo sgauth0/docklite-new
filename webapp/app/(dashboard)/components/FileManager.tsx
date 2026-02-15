@@ -322,11 +322,11 @@ export default function FileManager({ userSession, embedded = false }: FileManag
   };
 
   return (
-    <div className={`flex flex-col h-full ${embedded ? '' : 'w-full'}`}>
-      <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
+    <div className={`docklite-file-browser flex flex-col h-full ${embedded ? '' : 'w-full'}`}>
+      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.2)' }}>
         <div>
-          <div className="text-sm font-bold text-cyan-300">File Browser</div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-purple-200/70">Local Sites</div>
+          <div className="docklite-file-header text-sm font-bold">File Browser</div>
+          <div className="docklite-file-subtitle text-[10px] uppercase tracking-[0.2em]">Local Sites</div>
         </div>
         <div className="flex items-center gap-2">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
@@ -341,7 +341,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
           </button>
         </div>
       </div>
-      <div className="p-3 border-b border-purple-500/20">
+      <div className="p-3 border-b" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.2)' }}>
         <button
           onClick={handleBackClick}
           disabled={currentPath === minPath}
@@ -349,7 +349,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
         >
           ← Back
         </button>
-        <div className="text-[11px] truncate mt-2 text-purple-200/70">{currentPath}</div>
+        <div className="text-[11px] truncate mt-2" style={{ color: 'var(--text-muted)' }}>{currentPath}</div>
       </div>
       <div
         className="flex-1 p-3 overflow-y-auto"
@@ -358,18 +358,23 @@ export default function FileManager({ userSession, embedded = false }: FileManag
           setContextMenu(null);
         }}
       >
-        {loading && <p className="text-sm text-cyan-200/80">Loading...</p>}
-        {error && <p className="text-sm text-pink-300">{error}</p>}
+        {loading && <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Loading...</p>}
+        {error && <p className="text-sm" style={{ color: 'var(--status-error)' }}>{error}</p>}
         {!loading && !error && files.length === 0 && (
-          <p className="text-xs text-purple-200/60">No files in this folder.</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No files in this folder.</p>
         )}
         {!loading && !error && files.length > 0 && (
           <ul className="space-y-1">
             {files.map((file) => (
               <li
                 key={file.name}
-                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-purple-900/30 transition-colors"
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition-colors"
+                style={{
+                  '--hover-bg': 'var(--surface-dim)',
+                } as React.CSSProperties}
                 onContextMenu={(event) => handleContextMenu(event, file)}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <button
                   onClick={() => handleFileClick(file)}
@@ -382,7 +387,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                       <FileIcon size={16} weight="duotone" />
                     )}
                   </span>
-                  <span className="text-sm text-cyan-100 truncate">{file.name}</span>
+                  <span className="docklite-file-name text-sm truncate">{file.name}</span>
                 </button>
                 {!file.isDirectory && (
                   <button
@@ -415,9 +420,9 @@ export default function FileManager({ userSession, embedded = false }: FileManag
             style={{
               top: contextMenu.y,
               left: contextMenu.x,
-              background: '#0b0616',
-              border: '1px solid rgba(181, 55, 242, 0.9)',
-              boxShadow: '0 0 28px rgba(181, 55, 242, 0.65)',
+              background: 'var(--bg-darker)',
+              border: '1px solid rgba(var(--neon-purple-rgb), 0.9)',
+              boxShadow: '0 0 28px rgba(var(--neon-purple-rgb), 0.65)',
               width: '180px',
               maxWidth: 'calc(100vw - 24px)',
             }}
@@ -429,8 +434,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                 setContextMenu(null);
                 openTransferModal('move', contextMenu.file);
               }}
-              className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5"
+              className="w-full px-4 py-3 text-left text-sm font-bold transition-all"
               style={{ color: 'var(--neon-cyan)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
               Move to...
             </button>
@@ -440,8 +447,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                 setContextMenu(null);
                 openTransferModal('copy', contextMenu.file);
               }}
-              className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5"
+              className="w-full px-4 py-3 text-left text-sm font-bold transition-all"
               style={{ color: 'var(--neon-purple)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
               Copy to...
             </button>
@@ -453,8 +462,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                   setContextMenu(null);
                   handleDeleteEntry(target);
                 }}
-                className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-red-500/20"
-                style={{ color: '#ff6b6b' }}
+                className="w-full px-4 py-3 text-left text-sm font-bold transition-all"
+                style={{ color: 'var(--status-error)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(var(--status-error-rgb), 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 Delete
               </button>
@@ -464,7 +475,7 @@ export default function FileManager({ userSession, embedded = false }: FileManag
         document.body
       )}
       {transferMode && transferFile && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0, 0, 0, 0.8)' }}>
           <div className="cyber-card max-w-xl w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold neon-text-pink">
@@ -475,7 +486,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                   setTransferMode(null);
                   setTransferFile(null);
                 }}
-                className="text-gray-400 hover:text-neon-cyan transition-colors"
+                className="transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
                 ✕
               </button>
@@ -487,9 +501,9 @@ export default function FileManager({ userSession, embedded = false }: FileManag
               </span>
             </p>
 
-            <div className="mb-4 rounded-lg border border-purple-500/30 p-3">
+            <div className="mb-4 rounded-lg border p-3" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
               <div className="flex items-center justify-between gap-2">
-                <div className="text-xs font-mono text-purple-200/80 truncate">{pickerPath}</div>
+                <div className="text-xs font-mono truncate" style={{ color: 'var(--text-secondary)' }}>{pickerPath}</div>
                 <button
                   type="button"
                   onClick={handlePickerBack}
@@ -501,13 +515,13 @@ export default function FileManager({ userSession, embedded = false }: FileManag
               </div>
               <div className="mt-3 max-h-52 overflow-y-auto">
                 {pickerLoading && (
-                  <p className="text-xs text-cyan-200/80">Loading folders...</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Loading folders...</p>
                 )}
                 {pickerError && (
-                  <p className="text-xs text-pink-300">{pickerError}</p>
+                  <p className="text-xs" style={{ color: 'var(--status-error)' }}>{pickerError}</p>
                 )}
                 {!pickerLoading && !pickerError && pickerEntries.length === 0 && (
-                  <p className="text-xs text-purple-200/60">No subfolders here.</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No subfolders here.</p>
                 )}
                 {!pickerLoading && !pickerError && pickerEntries.length > 0 && (
                   <ul className="space-y-1">
@@ -516,7 +530,10 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                         <button
                           type="button"
                           onClick={() => handlePickerOpen(entry.name)}
-                          className="w-full text-left px-2 py-2 rounded-md hover:bg-purple-900/30 text-sm text-cyan-100"
+                          className="w-full text-left px-2 py-2 rounded-md text-sm transition-colors"
+                          style={{ color: 'var(--text-primary)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <span className="inline-flex items-center gap-2">
                             <Folder size={16} weight="duotone" />
@@ -531,8 +548,11 @@ export default function FileManager({ userSession, embedded = false }: FileManag
             </div>
 
             {transferError && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
-                <p className="text-sm text-red-400">{transferError}</p>
+              <div className="mb-4 p-3 rounded-lg border" style={{
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                borderColor: 'rgba(var(--status-error-rgb), 0.5)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--status-error)' }}>{transferError}</p>
               </div>
             )}
 
@@ -543,7 +563,13 @@ export default function FileManager({ userSession, embedded = false }: FileManag
                   setTransferMode(null);
                   setTransferFile(null);
                 }}
-                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 transition-colors"
+                style={{
+                  borderColor: 'var(--text-muted)',
+                  color: 'var(--text-secondary)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--text-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--text-muted)'}
                 disabled={transferLoading}
               >
                 Cancel
@@ -561,13 +587,16 @@ export default function FileManager({ userSession, embedded = false }: FileManag
         </div>
       )}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0, 0, 0, 0.8)' }}>
           <div className="cyber-card max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold neon-text-pink">Delete item</h2>
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="text-gray-400 hover:text-neon-cyan transition-colors"
+                className="transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
                 ✕
               </button>
@@ -580,22 +609,37 @@ export default function FileManager({ userSession, embedded = false }: FileManag
               .
             </p>
             {transferError && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
-                <p className="text-sm text-red-400">{transferError}</p>
+              <div className="mb-4 p-3 rounded-lg border" style={{
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                borderColor: 'rgba(var(--status-error-rgb), 0.5)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--status-error)' }}>{transferError}</p>
               </div>
             )}
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 transition-colors"
+                style={{
+                  borderColor: 'var(--text-muted)',
+                  color: 'var(--text-secondary)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--text-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--text-muted)'}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmDeleteEntry}
-                className="flex-1 px-4 py-2 rounded-lg font-bold bg-red-600/80 text-white hover:bg-red-500 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-bold transition-colors"
+                style={{
+                  background: 'var(--status-error)',
+                  color: 'var(--button-text)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--status-error-strong)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--status-error)'}
               >
                 Delete
               </button>

@@ -122,7 +122,7 @@ export default function SchemaBrowser() {
 
   if (error) {
     return (
-      <div className="p-4 text-xs font-mono" style={{ color: '#ff6b6b' }}>
+      <div className="p-4 text-xs font-mono" style={{ color: 'var(--status-error)' }}>
         {error}
       </div>
     );
@@ -137,8 +137,8 @@ export default function SchemaBrowser() {
         className="text-[11px] font-mono px-3 py-2 rounded-lg"
         style={{
           color: 'var(--text-secondary)',
-          background: 'rgba(0, 255, 255, 0.06)',
-          border: '1px solid rgba(0, 255, 255, 0.2)',
+          background: 'rgba(var(--neon-cyan-rgb), 0.06)',
+          border: '1px solid rgba(var(--neon-cyan-rgb), 0.2)',
         }}
       >
         Database: <span style={{ color: 'var(--neon-cyan)' }}>{dbName || `#${dbId}`}</span>
@@ -158,10 +158,10 @@ export default function SchemaBrowser() {
                   type="button"
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md transition-all"
                   style={{
-                    background: isActive ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 255, 0.1)',
-                    border: '1px solid rgba(0, 255, 255, 0.3)',
+                    background: isActive ? 'rgba(var(--neon-cyan-rgb), 0.3)' : 'rgba(var(--neon-cyan-rgb), 0.1)',
+                    border: '1px solid rgba(var(--neon-cyan-rgb), 0.3)',
                     color: 'var(--text-primary)',
-                    boxShadow: isActive ? '0 0 12px rgba(0, 255, 255, 0.4)' : 'none',
+                    boxShadow: isActive ? '0 0 12px rgba(var(--neon-cyan-rgb), 0.4)' : 'none',
                   }}
                   onClick={() => {
                     setExpandedTables((prev) => ({ ...prev, [table.name]: !isExpanded }));

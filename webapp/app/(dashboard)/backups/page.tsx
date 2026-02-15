@@ -382,11 +382,11 @@ export default function BackupsPage() {
   }, [destinations]);
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="docklite-backups max-w-[1400px] mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold neon-text-pink flex items-center gap-3">
-            <HardDrives size={32} weight="duotone" color="#d90fd9" />
+            <HardDrives size={32} weight="duotone" color="var(--neon-pink)" />
             Backups
           </h1>
           <p className="text-sm text-gray-400 mt-1">
@@ -619,7 +619,7 @@ function BackupsTab({
                 Create an instant restore point and optionally download it.
               </p>
             </div>
-            <Sparkle size={28} weight="duotone" color="#00e863" />
+            <Sparkle size={28} weight="duotone" color="var(--status-success)" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
@@ -825,14 +825,14 @@ function BackupsTab({
                           <button
                             onClick={() => onDelete(backup)}
                             className="cyber-button-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
-                            style={{ color: '#ff6b6b' }}
+                            style={{ color: 'var(--status-error)' }}
                           >
                             <Trash size={14} weight="duotone" />
                             Delete
                           </button>
                         </div>
                         {backup.error_message && (
-                          <div className="text-xs text-red-400 mt-2">{backup.error_message}</div>
+                          <div className="text-xs text-status-error mt-2">{backup.error_message}</div>
                         )}
                       </td>
                     </tr>
@@ -903,7 +903,7 @@ function SchedulesTab({ jobs, destinations, destinationMap, onEdit, onDuplicate,
                   <button
                     onClick={() => onDelete(job)}
                     className="cyber-button-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
-                    style={{ color: '#ff6b6b' }}
+                    style={{ color: 'var(--status-error)' }}
                   >
                     <Trash size={14} weight="duotone" />
                     Delete
@@ -957,11 +957,11 @@ function formatBytes(bytes?: number) {
 function statusBadge(status: string) {
   switch (status) {
     case 'success':
-      return 'bg-green-500/20 text-green-300';
+      return 'bg-status-success/20 text-status-success';
     case 'failed':
-      return 'bg-red-500/20 text-red-300';
+      return 'bg-status-error/20 text-status-error';
     case 'in_progress':
-      return 'bg-yellow-500/20 text-yellow-300';
+      return 'bg-status-warning/20 text-status-warning';
     default:
       return 'bg-gray-500/20 text-gray-300';
   }

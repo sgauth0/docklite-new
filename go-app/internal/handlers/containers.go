@@ -231,6 +231,8 @@ func (h *Handlers) Container(w http.ResponseWriter, r *http.Request) {
 		h.TrackContainer(w, r, id)
 	case "untrack":
 		h.UntrackContainer(w, r, id)
+	case "terminal":
+		h.ContainerTerminal(w, r, id)
 	case "":
 		h.handleApp(w, r, id)
 	default:

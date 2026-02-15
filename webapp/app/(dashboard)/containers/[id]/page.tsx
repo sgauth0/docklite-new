@@ -166,9 +166,9 @@ export default function ContainerDetailPage() {
     return (
       <div className="text-center py-16">
         <div className="flex justify-center mb-4">
-          <WarningCircle size={48} weight="duotone" color="#ff6b6b" />
+          <WarningCircle size={48} weight="duotone" color="var(--status-error)" />
         </div>
-        <div className="text-xl font-bold mb-4" style={{ color: '#ff6b6b' }}>
+        <div className="text-xl font-bold mb-4" style={{ color: 'var(--status-error)' }}>
           {error || 'Container not found'}
         </div>
         <Link href="/" className="btn-neon px-6 py-3 inline-flex items-center gap-2">
@@ -202,9 +202,9 @@ export default function ContainerDetailPage() {
         <span
           className="px-4 py-2 rounded-full text-sm font-bold"
           style={{
-            background: isRunning ? 'rgba(57, 255, 20, 0.2)' : 'rgba(255, 107, 107, 0.2)',
-            color: isRunning ? 'var(--neon-green)' : '#ff6b6b',
-            border: `2px solid ${isRunning ? 'var(--neon-green)' : '#ff6b6b'}`,
+            background: isRunning ? 'rgba(var(--status-success-rgb), 0.2)' : 'rgba(var(--status-error-rgb), 0.2)',
+            color: isRunning ? 'var(--neon-green)' : 'var(--status-error)',
+            border: `2px solid ${isRunning ? 'var(--neon-green)' : 'var(--status-error)'}`,
           }}
         >
           {isRunning ? '● RUNNING' : '○ STOPPED'}
@@ -225,7 +225,7 @@ export default function ContainerDetailPage() {
             className={`px-6 py-3 rounded-xl font-bold transition-all ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-gray-900 neon-glow'
-                : 'card-vapor text-cyan-300 hover:text-cyan-100'
+                : 'card-vapor text-neon-cyan hover:text-neon-cyan/80'
             }`}
           >
             <span className="mr-2 inline-flex">{tab.icon}</span>
@@ -332,14 +332,14 @@ export default function ContainerDetailPage() {
                     <div className="font-mono text-sm">
                       <div className="mb-2">
                         <span className="opacity-70">Source:</span>
-                        <div className="font-bold text-cyan-300">{mount.Source}</div>
+                        <div className="font-bold text-neon-cyan">{mount.Source}</div>
                       </div>
                       <div className="mb-2">
                         <span className="opacity-70">Destination:</span>
-                        <div className="font-bold text-pink-300">{mount.Destination}</div>
+                        <div className="font-bold text-neon-pink">{mount.Destination}</div>
                       </div>
                       <div className="flex gap-4 text-xs">
-                        <span className={mount.RW ? 'text-green-400' : 'text-red-400'}>
+                        <span className={mount.RW ? 'text-status-success' : 'text-status-error'}>
                           {mount.RW ? (
                             <span className="inline-flex items-center gap-2">
                               <LockOpen size={12} weight="duotone" />
@@ -481,15 +481,15 @@ export default function ContainerDetailPage() {
                   <div className="font-mono text-xs space-y-1">
                     <div>
                       <span className="opacity-70">IP: </span>
-                      <span className="text-cyan-300">{network.IPAddress || 'N/A'}</span>
+                      <span className="text-neon-cyan">{network.IPAddress || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="opacity-70">Gateway: </span>
-                      <span className="text-cyan-300">{network.Gateway || 'N/A'}</span>
+                      <span className="text-neon-cyan">{network.Gateway || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="opacity-70">MAC: </span>
-                      <span className="text-cyan-300">{network.MacAddress || 'N/A'}</span>
+                      <span className="text-neon-cyan">{network.MacAddress || 'N/A'}</span>
                     </div>
                   </div>
                 </div>

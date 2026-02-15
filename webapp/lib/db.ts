@@ -63,8 +63,10 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS databases (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
+      type TEXT DEFAULT 'postgres',
       container_id TEXT UNIQUE NOT NULL,
       postgres_port INTEGER NOT NULL,
+      db_path TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -337,9 +339,9 @@ export function getAllDatabases(): DatabaseType[] {
 
 export function createDatabase(params: CreateDatabaseParams): DatabaseType {
   const result = db.prepare(`
-    INSERT INTO databases (name, container_id, postgres_port)
-    VALUES (?, ?, ?)
-  `).run(params.name, params.container_id, params.postgres_port);
+    INSERT INTO databases (name, type, container_id, postgres_port, db_path)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(params.name, params.type, params.container_id, params.postgres_port, params.db_path || null);
 
   return getDatabaseById(result.lastInsertRowid as number)!;
 }

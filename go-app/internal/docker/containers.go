@@ -303,33 +303,31 @@ func formatPorts(ports []types.Port) string {
 	return strings.Join(parts, ", ")
 }
 
-func buildHostRule(domain string, includeWww bool) string {
-	normalized := strings.ToLower(strings.TrimSpace(domain))
-	if includeWww && !strings.HasPrefix(normalized, "www.") {
-		return fmt.Sprintf("Host(`%s`,`www.%s`)", normalized, normalized)
-	}
-	return fmt.Sprintf("Host(`%s`)", normalized)
-}
-
 func buildSiteLabels(domain string, includeWww bool, templateType string, internalPort int, siteID int64, userID int64, folderID *int64) map[string]string {
-	sanitized := sanitizeDomain(domain)
-	hostRule := buildHostRule(domain, includeWww)
+	caddyHosts := strings.ToLower(strings.TrimSpace(domain))
+	if includeWww && !strings.HasPrefix(caddyHosts, "www.") {
+		caddyHosts = caddyHosts + ", www." + caddyHosts
+	}
 	folderValue := ""
 	if folderID != nil {
 		folderValue = fmt.Sprintf("%d", *folderID)
 	}
 	return map[string]string{
-		"docklite.managed":   "true",
-		"docklite.site.id":   fmt.Sprintf("%d", siteID),
-		"docklite.domain":    domain,
-		"docklite.type":      templateType,
-		"docklite.user.id":   fmt.Sprintf("%d", userID),
-		"docklite.folder.id": folderValue,
-		"traefik.enable":     "true",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.rule", sanitized):                      hostRule,
-		fmt.Sprintf("traefik.http.routers.docklite-%s.entrypoints", sanitized):               "websecure",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.tls", sanitized):                       "true",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.tls.certresolver", sanitized):          "letsencrypt",
-		fmt.Sprintf("traefik.http.services.docklite-%s.loadbalancer.server.port", sanitized): fmt.Sprintf("%d", internalPort),
+		"docklite.managed":     "true",
+		"docklite.site.id":     fmt.Sprintf("%d", siteID),
+		"docklite.domain":      domain,
+		"docklite.type":        templateType,
+		"docklite.user.id":     fmt.Sprintf("%d", userID),
+		"docklite.folder.id":   folderValue,
+		"docklite.include_www": boolToLabel(includeWww),
+		"caddy":                caddyHosts,
+		"caddy.reverse_proxy":  fmt.Sprintf("{{upstreams %d}}", internalPort),
 	}
+}
+
+func boolToLabel(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
 }

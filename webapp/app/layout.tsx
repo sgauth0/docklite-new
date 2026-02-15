@@ -5,6 +5,10 @@ import ThemeInit from './theme-init'
 export const metadata: Metadata = {
   title: 'DockLite - Docker Control Panel',
   description: 'Simple Docker-based web hosting control panel',
+  icons: {
+    icon: '/dockliteiconL.png',
+    apple: '/dockliteiconL.png',
+  },
 }
 
 export default function RootLayout({

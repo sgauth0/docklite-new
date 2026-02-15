@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardNav from '../nav';
 import SidebarPanel from './SidebarPanel';
 import XtermDrawer from './XtermDrawer';
@@ -13,6 +13,23 @@ type DashboardShellProps = {
 
 export default function DashboardShell({ user, children }: DashboardShellProps) {
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalTarget, setTerminalTarget] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ containerId: string; containerName: string }>;
+      if (!customEvent.detail?.containerId) {
+        return;
+      }
+      setTerminalTarget({
+        id: customEvent.detail.containerId,
+        name: customEvent.detail.containerName,
+      });
+      setTerminalOpen(true);
+    };
+    window.addEventListener('docklite-open-terminal', handler);
+    return () => window.removeEventListener('docklite-open-terminal', handler);
+  }, []);
 
   return (
     <>
@@ -23,8 +40,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       />
 
       {/* Customizable Sidebars - Overlay style, don't push content */}
-      <SidebarPanel side="left" mode="file-browser" defaultOpen userSession={user} />
-      <SidebarPanel side="right" mode="modular" defaultContent="none" />
+      <SidebarPanel side="left" mode="file-browser" defaultOpen={false} userSession={user} />
+      <SidebarPanel side="right" mode="modular" defaultContent="none" defaultOpen={false} />
 
       {/* Main content area - keeps existing width */}
       <main className="p-8 relative z-10">
@@ -39,7 +56,12 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         </div>
       </footer>
 
-      <XtermDrawer open={terminalOpen} onClose={() => setTerminalOpen(false)} />
+      <XtermDrawer
+        open={terminalOpen}
+        onClose={() => setTerminalOpen(false)}
+        containerId={terminalTarget?.id}
+        containerName={terminalTarget?.name}
+      />
     </>
   );
 }

@@ -4,7 +4,7 @@ import { ContainerInfo } from '@/types';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Package, Clock, Plug, IdentificationCard, Eye, Trash, Play, ArrowsClockwise, Stop, DotsThree, Copy, UserCircle, Folder } from '@phosphor-icons/react';
+import { Package, Clock, Plug, IdentificationCard, Eye, Trash, Play, ArrowsClockwise, Stop, DotsThree, Copy, UserCircle, Folder, TerminalWindow } from '@phosphor-icons/react';
 import { useToast } from '@/lib/hooks/useToast';
 
 interface ContainerCardProps {
@@ -41,7 +41,7 @@ export default function ContainerCard({
   const toast = useToast();
 
   const isRunning = container.state === 'running';
-  const statusColor = isRunning ? 'var(--neon-green)' : '#ff6b6b';
+  const statusColor = isRunning ? 'var(--neon-green)' : 'var(--status-error)';
   const statusIcon = isRunning ? '●' : '○';
   const statusText = isRunning ? 'ONLINE' : 'OFFLINE';
 
@@ -59,10 +59,10 @@ export default function ContainerCard({
 
   // Get actual hex color for shadows (CSS vars don't always work in box-shadow)
   const shadowColor = isSite
-    ? '#ff6bd6'
+    ? 'var(--neon-pink)'
     : isDatabase
-    ? '#6bffb0'
-    : '#4fd6ff';
+    ? 'var(--neon-green)'
+    : 'var(--neon-cyan)';
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -94,9 +94,9 @@ export default function ContainerCard({
 
   return (
     <div
-      className="p-4 rounded-xl transition-all hover:scale-[1.02] group relative h-[340px] flex flex-col"
+      className="docklite-container-card p-4 rounded-xl transition-all hover:scale-[1.02] group relative h-[340px] flex flex-col"
       style={{
-        background: 'rgba(10, 5, 20, 0.3)',
+        background: 'var(--surface-dim)',
         backdropFilter: 'blur(12px)',
         border: `2px solid ${shadowColor}`,
         boxShadow: `
@@ -161,9 +161,9 @@ export default function ContainerCard({
                 style={{
                   top: menuPosition.top,
                   left: menuPosition.left,
-                  background: '#0b0616',
-                  border: '1px solid rgba(181, 55, 242, 0.9)',
-                  boxShadow: '0 0 28px rgba(181, 55, 242, 0.65)',
+                  background: 'var(--bg-darker)',
+                  border: '1px solid rgba(var(--neon-purple-rgb), 0.9)',
+                  boxShadow: '0 0 28px rgba(var(--neon-purple-rgb), 0.65)',
                   width: '200px',
                   maxWidth: 'calc(100vw - 24px)',
                 }}
@@ -187,6 +187,25 @@ export default function ContainerCard({
                   View Details
                 </button>
               )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMenuOpenChange?.(false);
+                  window.dispatchEvent(new CustomEvent('docklite-open-terminal', {
+                    detail: {
+                      containerId: container.id,
+                      containerName: container.name,
+                    },
+                  }));
+                }}
+                onPointerDown={stopDnd}
+                className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
+                style={{ color: 'var(--neon-green)' }}
+              >
+                <TerminalWindow size={16} weight="duotone" />
+                Open in Terminal
+              </button>
               <button
                 onClick={async (e) => {
                   e.stopPropagation();
@@ -236,8 +255,10 @@ export default function ContainerCard({
                     onAssign(container.id, container.name);
                   }}
                   onPointerDown={stopDnd}
-                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
+                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all flex items-center gap-3"
                   style={{ color: 'var(--neon-green)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <UserCircle size={16} weight="duotone" />
                   Assign to user
@@ -252,8 +273,10 @@ export default function ContainerCard({
                     onMoveFolder(container.id, container.name);
                   }}
                   onPointerDown={stopDnd}
-                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
+                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all flex items-center gap-3"
                   style={{ color: 'var(--neon-cyan)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <Folder size={16} weight="duotone" />
                   Move to folder
@@ -268,8 +291,10 @@ export default function ContainerCard({
                     onToggleTracking(container.id, isTracked);
                   }}
                   onPointerDown={stopDnd}
-                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-white/5 flex items-center gap-3"
-                  style={{ color: isTracked ? '#ff6b6b' : 'var(--neon-green)' }}
+                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all flex items-center gap-3"
+                  style={{ color: isTracked ? 'var(--status-error)' : 'var(--neon-green)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-dim)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <Eye size={16} weight="duotone" />
                   {isTracked ? 'Untrack' : 'Track'}
@@ -284,8 +309,10 @@ export default function ContainerCard({
                     onDelete(container.id, container.labels?.['docklite.domain'] || container.name);
                   }}
                   onPointerDown={stopDnd}
-                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-red-500/20 flex items-center gap-3"
-                  style={{ color: '#ff6b6b' }}
+                  className="w-full px-4 py-3 text-left text-sm font-bold transition-all flex items-center gap-3"
+                  style={{ color: 'var(--status-error)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(var(--status-error-rgb), 0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <Trash size={16} weight="duotone" />
                   Delete
@@ -308,10 +335,10 @@ export default function ContainerCard({
             size={48}
             weight="duotone"
             style={{
-              color: isRunning ? '#00ffff' : '#4a4a4a',
+              color: isRunning ? 'var(--neon-cyan)' : 'var(--text-muted)',
               filter: isRunning
-                ? 'drop-shadow(0 0 8px #00ffff) drop-shadow(0 0 12px #00ffff) drop-shadow(0 0 16px #00ffff80)'
-                : 'drop-shadow(0 0 2px #4a4a4a40)',
+                ? 'drop-shadow(0 0 8px var(--neon-cyan)) drop-shadow(0 0 12px var(--neon-cyan)) drop-shadow(0 0 16px var(--neon-cyan)80)'
+                : 'drop-shadow(0 0 2px var(--text-muted)40)',
             }}
           />
         </div>
@@ -320,7 +347,7 @@ export default function ContainerCard({
       {/* Container Name - Better typography */}
       <div className="mb-2 text-center mt-14 relative z-20" style={{ overflow: 'visible', background: 'transparent' }}>
         <h3
-          className="font-bold text-lg neon-text mb-1 leading-tight line-clamp-3"
+          className="docklite-container-name font-bold text-lg neon-text mb-1 leading-tight line-clamp-3"
           style={{
             color: 'var(--neon-cyan)',
             height: '4.5rem',
@@ -371,7 +398,7 @@ export default function ContainerCard({
       </div>
 
       {/* Actions - Better button layout with tooltips */}
-      <div className="flex gap-2 mt-auto pt-2 border-t border-purple-500/20">
+      <div className="flex gap-2 mt-auto pt-2 border-t" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.2)' }}>
         {!isRunning ? (
           <button
             onClick={(e) => {

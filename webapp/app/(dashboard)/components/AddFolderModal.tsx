@@ -82,7 +82,7 @@ export default function AddFolderModal({ onClose, onSuccess, parentFolderId, par
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-status-error">{error}</p>
             </div>
           )}
 

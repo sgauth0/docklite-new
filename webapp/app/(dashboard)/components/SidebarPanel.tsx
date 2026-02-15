@@ -251,8 +251,7 @@ export default function SidebarPanel({
 function StatsContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
-        <ChartLine size={16} weight="duotone" />
+                  <div className="mb-4 text-neon-cyan font-bold flex items-center gap-2">        <ChartLine size={16} weight="duotone" />
         Live Stats
       </div>
       <p className="text-xs opacity-70 mb-4">System metrics</p>
@@ -277,8 +276,7 @@ function StatsContent() {
 function LogsContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
-        <Scroll size={16} weight="duotone" />
+                  <div className="mb-4 text-neon-cyan font-bold flex items-center gap-2">        <Scroll size={16} weight="duotone" />
         Container Logs
       </div>
       <div className="bg-black/50 p-3 rounded-lg text-xs space-y-1 font-mono" style={{ color: 'var(--neon-green)' }}>
@@ -294,8 +292,7 @@ function LogsContent() {
 function DatabaseContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
-        <Database size={16} weight="duotone" />
+                  <div className="mb-4 text-neon-cyan font-bold flex items-center gap-2">        <Database size={16} weight="duotone" />
         Database Query
       </div>
       <textarea
@@ -322,8 +319,7 @@ function DatabaseContent() {
 function SearchContent() {
   return (
     <div className="text-sm font-mono">
-      <div className="mb-4 text-cyan-300 font-bold flex items-center gap-2">
-        <MagnifyingGlass size={16} weight="duotone" />
+                  <div className="mb-4 text-neon-cyan font-bold flex items-center gap-2">        <MagnifyingGlass size={16} weight="duotone" />
         Search
       </div>
       <input

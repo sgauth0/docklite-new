@@ -178,7 +178,7 @@ const statusBadge = (status: string) => {
   return (
     <span
       className="text-xs font-bold px-3 py-1 rounded-full"
-      style={{ border: '1px solid rgba(255, 255, 255, 0.2)', color: 'var(--text-secondary)' }}
+      style={{ border: '1px solid rgba(var(--text-muted-rgb), 0.2)', color: 'var(--text-secondary)' }}
     >
       {status ? status.toUpperCase() : 'UNKNOWN'}
     </span>
@@ -433,7 +433,7 @@ export default function ServerPage() {
       </div>
 
       {accessDenied && (
-        <div className="card-vapor p-6 rounded-xl flex items-center gap-3 mb-6" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
+        <div className="card-vapor p-6 rounded-xl flex items-center gap-3 mb-6" style={{ borderColor: 'rgba(var(--text-muted-rgb), 0.15)' }}>
           <ShieldCheck size={22} weight="duotone" style={{ color: 'var(--neon-cyan)' }} />
           <div>
             <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Admin access required</div>
@@ -445,15 +445,15 @@ export default function ServerPage() {
       )}
 
       {error && (
-        <div className="mb-6 card-vapor p-4 rounded-xl flex items-center gap-3" style={{ borderColor: 'rgba(255, 107, 107, 0.6)' }}>
-          <WarningCircle size={18} weight="duotone" style={{ color: '#ff6b6b' }} />
+        <div className="mb-6 card-vapor p-4 rounded-xl flex items-center gap-3" style={{ borderColor: 'rgba(var(--status-error-rgb), 0.6)' }}>
+          <WarningCircle size={18} weight="duotone" style={{ color: 'var(--status-error)' }} />
           <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{error}</span>
         </div>
       )}
 
       {accessDenied ? null : (
-      <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card-vapor p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
             <Info size={18} weight="duotone" />
@@ -525,7 +525,7 @@ export default function ServerPage() {
                     {formatBytes(overview.memory.total - overview.memory.free)} / {formatBytes(overview.memory.total)}
                   </span>
                 </div>
-                <div className="overflow-hidden h-3 rounded-lg" style={{ background: 'rgba(26, 10, 46, 0.6)', border: '1px solid rgba(255, 16, 240, 0.3)' }}>
+                <div className="overflow-hidden h-3 rounded-lg" style={{ background: 'var(--surface-muted)', border: '1px solid rgba(var(--neon-pink-rgb), 0.3)' }}>
                   <div
                     className="h-full transition-all duration-500"
                     style={{
@@ -543,7 +543,7 @@ export default function ServerPage() {
                     {formatBytes(overview.disk.used)} / {formatBytes(overview.disk.total)}
                   </span>
                 </div>
-                <div className="overflow-hidden h-3 rounded-lg" style={{ background: 'rgba(26, 10, 46, 0.6)', border: '1px solid rgba(57, 255, 20, 0.3)' }}>
+                <div className="overflow-hidden h-3 rounded-lg" style={{ background: 'var(--surface-muted)', border: '1px solid rgba(var(--status-success-rgb), 0.3)' }}>
                   <div
                     className="h-full transition-all duration-500"
                     style={{
@@ -579,7 +579,7 @@ export default function ServerPage() {
               </div>
               <div className="flex items-center gap-2">
                 {updates.rebootRequired ? (
-                  <WarningCircle size={16} weight="duotone" style={{ color: '#ff6b6b' }} />
+                  <WarningCircle size={16} weight="duotone" style={{ color: 'var(--status-error)' }} />
                 ) : (
                   <CheckCircle size={16} weight="duotone" style={{ color: 'var(--neon-green)' }} />
                 )}
@@ -597,7 +597,7 @@ export default function ServerPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card-vapor p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
             <Gear size={18} weight="duotone" />
@@ -729,7 +729,7 @@ export default function ServerPage() {
                   </div>
                   <pre
                     className="text-xs p-3 rounded-lg overflow-auto max-h-48"
-                    style={{ background: 'rgba(12, 5, 24, 0.7)', color: 'var(--text-primary)' }}
+                    style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)' }}
                   >
                     {loadingServiceLogs ? 'Loading logs...' : serviceLogs || 'No logs available'}
                   </pre>
@@ -782,7 +782,7 @@ export default function ServerPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card-vapor p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
             <HardDrives size={18} weight="duotone" />
@@ -795,7 +795,7 @@ export default function ServerPage() {
           ) : (
             <div className="space-y-3">
               <div className="text-xs font-bold" style={{ color: 'var(--neon-purple)' }}>MOUNTS</div>
-              <div className="max-h-64 overflow-auto">
+              <div>
                 <table className="w-full text-left text-xs">
                   <thead style={{ color: 'var(--text-secondary)' }}>
                     <tr>
@@ -862,7 +862,7 @@ export default function ServerPage() {
 
               <div>
                 <div className="text-xs font-bold mb-2" style={{ color: 'var(--neon-purple)' }}>VOLUMES (READ-ONLY)</div>
-                <div className="max-h-40 overflow-auto text-xs" style={{ color: 'var(--text-secondary)' }}>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {storage.volumes.length === 0 ? (
                     <div>No volumes detected.</div>
                   ) : (
@@ -882,7 +882,7 @@ export default function ServerPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card-vapor p-6 rounded-xl">
           <h2 className="text-xl font-bold mb-4 neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
             <TerminalWindow size={18} weight="duotone" />
@@ -898,7 +898,7 @@ export default function ServerPage() {
               </div>
               <pre
                 className="text-xs p-3 rounded-lg overflow-auto max-h-48 mt-2"
-                style={{ background: 'rgba(12, 5, 24, 0.7)', color: 'var(--text-primary)' }}
+                style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)' }}
               >
                 {systemLogs || 'No system logs loaded.'}
               </pre>
@@ -912,7 +912,7 @@ export default function ServerPage() {
               </div>
               <pre
                 className="text-xs p-3 rounded-lg overflow-auto max-h-48 mt-2"
-                style={{ background: 'rgba(12, 5, 24, 0.7)', color: 'var(--text-primary)' }}
+                style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)' }}
               >
                 {dockliteLogs || 'No DockLite logs loaded.'}
               </pre>
@@ -938,8 +938,8 @@ export default function ServerPage() {
             </button>
           </div>
         </div>
-      </div>
-      </>
+          </div>
+        </>
       )}
     </div>
   );

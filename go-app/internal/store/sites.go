@@ -25,8 +25,9 @@ func (s *SQLiteStore) GetSiteByID(id int64) (*SiteRecord, error) {
   `, id)
 	var record SiteRecord
 	var containerID sql.NullString
+	var status sql.NullString
 	var folderID sql.NullInt64
-	if err := row.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &record.Status, &folderID, &record.CreatedAt); err != nil {
+	if err := row.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &status, &folderID, &record.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -34,6 +35,9 @@ func (s *SQLiteStore) GetSiteByID(id int64) (*SiteRecord, error) {
 	}
 	if containerID.Valid {
 		record.ContainerID = &containerID.String
+	}
+	if status.Valid {
+		record.Status = status.String
 	}
 	if folderID.Valid {
 		record.FolderID = &folderID.Int64
@@ -56,12 +60,16 @@ func (s *SQLiteStore) ListSites() ([]SiteRecord, error) {
 	for rows.Next() {
 		var record SiteRecord
 		var containerID sql.NullString
+		var status sql.NullString
 		var folderID sql.NullInt64
-		if err := rows.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &record.Status, &folderID, &record.CreatedAt); err != nil {
+		if err := rows.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &status, &folderID, &record.CreatedAt); err != nil {
 			return nil, err
 		}
 		if containerID.Valid {
 			record.ContainerID = &containerID.String
+		}
+		if status.Valid {
+			record.Status = status.String
 		}
 		if folderID.Valid {
 			record.FolderID = &folderID.Int64
@@ -146,8 +154,9 @@ func scanSite(scanner interface {
 }) (*SiteRecord, error) {
 	var record SiteRecord
 	var containerID sql.NullString
+	var status sql.NullString
 	var folderID sql.NullInt64
-	if err := scanner.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &record.Status, &folderID, &record.CreatedAt); err != nil {
+	if err := scanner.Scan(&record.ID, &record.Domain, &record.UserID, &containerID, &record.TemplateType, &record.CodePath, &status, &folderID, &record.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -155,6 +164,9 @@ func scanSite(scanner interface {
 	}
 	if containerID.Valid {
 		record.ContainerID = &containerID.String
+	}
+	if status.Valid {
+		record.Status = status.String
 	}
 	if folderID.Valid {
 		record.FolderID = &folderID.Int64

@@ -121,10 +121,10 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="card-vapor max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col" style={{
-        background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.98) 0%, rgba(10, 5, 16, 0.95) 100%)'
+        background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)'
       }}>
         {/* Header */}
-        <div className="p-6 border-b border-purple-500/30">
+        <div className="p-6 border-b" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
@@ -139,9 +139,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-lg font-bold transition-all hover:scale-105"
               style={{
-                background: 'rgba(255, 107, 107, 0.2)',
-                border: '1px solid #ff6b6b',
-                color: '#ff6b6b',
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                border: '1px solid var(--status-error)',
+                color: 'var(--status-error)',
               }}
             >
               <span className="inline-flex items-center gap-2">
@@ -166,9 +166,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
           {error && (
             <div className="text-center py-12">
               <div className="flex justify-center mb-4">
-                <WarningCircle size={32} weight="duotone" color="#ff6b6b" />
+                <WarningCircle size={32} weight="duotone" color="var(--status-error)" />
               </div>
-              <p className="text-red-500">{error}</p>
+              <p style={{ color: 'var(--status-error)' }}>{error}</p>
             </div>
           )}
 
@@ -194,9 +194,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                     className="p-4 rounded-lg border transition-all hover:scale-[1.01]"
                     style={{
                       background: isManaged
-                        ? 'linear-gradient(135deg, rgba(57, 255, 20, 0.1) 0%, rgba(0, 255, 255, 0.1) 100%)'
-                        : 'linear-gradient(135deg, rgba(100, 100, 100, 0.1) 0%, rgba(60, 60, 60, 0.1) 100%)',
-                      borderColor: isManaged ? 'rgba(57, 255, 20, 0.3)' : 'rgba(100, 100, 100, 0.3)',
+                        ? 'linear-gradient(135deg, rgba(var(--status-success-rgb), 0.1) 0%, rgba(var(--neon-cyan-rgb), 0.1) 100%)'
+                        : 'linear-gradient(135deg, rgba(var(--text-muted-rgb), 0.1) 0%, rgba(var(--text-muted-rgb), 0.1) 100%)',
+                      borderColor: isManaged ? 'rgba(var(--status-success-rgb), 0.3)' : 'rgba(var(--text-muted-rgb), 0.3)',
                     }}
                   >
                     <div className="flex items-center justify-between gap-4">
@@ -209,7 +209,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                             <span
                               className="px-2 py-1 rounded-full text-xs font-bold flex-shrink-0"
                               style={{
-                                background: 'rgba(57, 255, 20, 0.2)',
+                                background: 'rgba(var(--status-success-rgb), 0.2)',
                                 color: 'var(--neon-green)',
                                 border: '1px solid var(--neon-green)',
                               }}
@@ -223,9 +223,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                           <span
                             className="px-2 py-1 rounded-full text-xs font-bold flex-shrink-0"
                             style={{
-                              background: isRunning ? 'rgba(57, 255, 20, 0.2)' : 'rgba(255, 107, 107, 0.2)',
-                              color: isRunning ? 'var(--neon-green)' : '#ff6b6b',
-                              border: `1px solid ${isRunning ? 'var(--neon-green)' : '#ff6b6b'}`,
+                              background: isRunning ? 'rgba(var(--status-success-rgb), 0.2)' : 'rgba(var(--status-error-rgb), 0.2)',
+                              color: isRunning ? 'var(--neon-green)' : 'var(--status-error)',
+                              border: `1px solid ${isRunning ? 'var(--neon-green)' : 'var(--status-error)'}`,
                             }}
                           >
                             {isRunning ? '● RUNNING' : '○ STOPPED'}
@@ -253,10 +253,10 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                           className="px-3 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                           style={{
                             background: isTracked
-                              ? 'rgba(255, 107, 107, 0.2)'
-                              : 'rgba(57, 255, 20, 0.2)',
-                            border: `1px solid ${isTracked ? '#ff6b6b' : 'var(--neon-green)'}`,
-                            color: isTracked ? '#ff6b6b' : 'var(--neon-green)',
+                              ? 'rgba(var(--status-error-rgb), 0.2)'
+                              : 'rgba(var(--status-success-rgb), 0.2)',
+                            border: `1px solid ${isTracked ? 'var(--status-error)' : 'var(--neon-green)'}`,
+                            color: isTracked ? 'var(--status-error)' : 'var(--neon-green)',
                           }}
                           title={isTracked ? 'Untrack container' : 'Track container'}
                         >
@@ -268,7 +268,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                             className="px-3 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                             style={{
                               background: 'linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%)',
-                              color: 'var(--bg-darker)',
+                              color: 'var(--button-text)',
                             }}
                           >
                             <Play size={14} weight="duotone" />
@@ -280,7 +280,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                               className="px-3 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                               style={{
                                 background: 'linear-gradient(135deg, var(--neon-yellow) 0%, var(--neon-pink) 100%)',
-                                color: 'var(--bg-darker)',
+                                color: 'var(--button-text)',
                               }}
                             >
                               <ArrowClockwise size={14} weight="duotone" />
@@ -289,8 +289,8 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                               onClick={() => handleAction(container.id, 'stop')}
                               className="px-3 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                               style={{
-                                background: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
-                                color: 'white',
+                                background: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
+                                color: 'var(--button-text)',
                               }}
                             >
                               <Stop size={14} weight="fill" />
@@ -301,9 +301,9 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
                           onClick={() => handleAction(container.id, 'delete', container.name)}
                           className="px-3 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
                           style={{
-                            background: 'rgba(255, 107, 107, 0.2)',
-                            border: '1px solid #ff6b6b',
-                            color: '#ff6b6b',
+                            background: 'rgba(var(--status-error-rgb), 0.2)',
+                            border: '1px solid var(--status-error)',
+                            color: 'var(--status-error)',
                           }}
                         >
                           <Trash size={14} weight="duotone" />
@@ -318,7 +318,7 @@ export default function AllContainersModal({ onClose }: AllContainersModalProps)
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-purple-500/30 text-center">
+        <div className="p-4 border-t text-center" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
           <p className="text-xs font-mono opacity-60" style={{ color: 'var(--text-secondary)' }}>
             Total: {containers.length} containers ({containers.filter(c => c.state === 'running').length} running)
           </p>

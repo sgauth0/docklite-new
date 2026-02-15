@@ -24,9 +24,9 @@ export default function ConfirmDeleteModal({
       <div
         className="card-vapor max-w-md w-full p-6 relative"
         style={{
-          background: 'linear-gradient(135deg, rgba(46, 10, 26, 0.98) 0%, rgba(30, 5, 10, 0.98) 100%)',
-          border: '2px solid #ff6b6b',
-          boxShadow: '0 0 30px rgba(255, 107, 107, 0.5)',
+          background: 'linear-gradient(135deg, rgba(var(--status-error-rgb), 0.25) 0%, rgba(var(--status-error-rgb), 0.45) 100%)',
+          border: '2px solid var(--status-error)',
+          boxShadow: '0 0 30px rgba(var(--status-error-rgb), 0.5)',
         }}
       >
         {/* Close button */}
@@ -35,8 +35,8 @@ export default function ConfirmDeleteModal({
           disabled={loading}
           className="absolute top-4 right-4 p-2 rounded-lg transition-all hover:scale-110"
           style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(var(--text-muted-rgb), 0.1)',
+            border: '1px solid rgba(var(--text-muted-rgb), 0.2)',
           }}
         >
           <X size={20} color="#fff" weight="bold" />
@@ -48,13 +48,13 @@ export default function ConfirmDeleteModal({
             <div
               className="p-3 rounded-lg"
               style={{
-                background: 'rgba(255, 107, 107, 0.2)',
-                border: '1px solid #ff6b6b',
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                border: '1px solid var(--status-error)',
               }}
             >
-              <Warning size={32} color="#ff6b6b" weight="duotone" />
+              <Warning size={32} color="var(--status-error)" weight="duotone" />
             </div>
-            <h2 className="text-2xl font-bold" style={{ color: '#ff6b6b' }}>
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--status-error)' }}>
               {title}
             </h2>
           </div>
@@ -67,9 +67,9 @@ export default function ConfirmDeleteModal({
           <div
             className="mb-6 p-4 rounded-lg font-mono text-sm"
             style={{
-              background: 'rgba(255, 107, 107, 0.1)',
-              border: '1px solid rgba(255, 107, 107, 0.3)',
-              color: '#ff6b6b',
+              background: 'rgba(var(--status-error-rgb), 0.1)',
+              border: '1px solid rgba(var(--status-error-rgb), 0.3)',
+              color: 'var(--status-error)',
             }}
           >
             {itemName}
@@ -79,9 +79,9 @@ export default function ConfirmDeleteModal({
         <div
           className="mb-6 p-3 rounded-lg text-sm flex items-center gap-2"
           style={{
-            background: 'rgba(255, 165, 0, 0.1)',
-            border: '1px solid rgba(255, 165, 0, 0.3)',
-            color: '#ffa500',
+            background: 'rgba(var(--status-warning-rgb), 0.1)',
+            border: '1px solid rgba(var(--status-warning-rgb), 0.3)',
+            color: 'var(--status-warning)',
           }}
         >
           <Warning size={16} weight="duotone" />
@@ -95,8 +95,8 @@ export default function ConfirmDeleteModal({
             disabled={loading}
             className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50"
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(var(--text-muted-rgb), 0.1)',
+              border: '1px solid rgba(var(--text-muted-rgb), 0.2)',
               color: 'var(--text-secondary)',
             }}
           >
@@ -108,9 +108,9 @@ export default function ConfirmDeleteModal({
             disabled={loading}
             className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: 'linear-gradient(135deg, #ff6b6b 0%, #d90000 100%)',
+              background: 'linear-gradient(135deg, var(--status-error) 0%, var(--status-error-strong) 100%)',
               color: 'white',
-              boxShadow: '0 0 20px rgba(255, 107, 107, 0.4)',
+              boxShadow: '0 0 20px rgba(var(--status-error-rgb), 0.4)',
             }}
           >
             {loading ? 'Deleting...' : 'Delete'}

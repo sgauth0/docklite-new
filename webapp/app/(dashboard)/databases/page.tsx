@@ -54,8 +54,29 @@ export default function DatabasesPage() {
   const [newDbName, setNewDbName] = useState('');
   const [newDbUsername, setNewDbUsername] = useState('docklite');
   const [newDbPassword, setNewDbPassword] = useState('');
+  const [dbType, setDbType] = useState<'postgres' | 'sqlite'>('postgres');
+  const [availableContainers, setAvailableContainers] = useState<any[]>([]);
+  const [selectedContainerId, setSelectedContainerId] = useState('');
+  const [sqlitePath, setSqlitePath] = useState('/app/data/db.sqlite');
+  const [fetchingContainers, setFetchingContainers] = useState(false);
   const [creating, setCreating] = useState(false);
   const [connectionInfo, setConnectionInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (dbType === 'sqlite' && showCreateForm) {
+      setFetchingContainers(true);
+      fetch('/api/containers/all')
+        .then(res => res.json())
+        .then(data => {
+            setAvailableContainers(data.containers || []);
+            setFetchingContainers(false);
+        })
+        .catch(err => {
+            console.error('Failed to fetch containers:', err);
+            setFetchingContainers(false);
+        });
+    }
+  }, [dbType, showCreateForm]);
   const [editingDb, setEditingDb] = useState<DatabaseWithSize | null>(null);
   const [editUsername, setEditUsername] = useState('');
   const [editPassword, setEditPassword] = useState('');
@@ -102,14 +123,23 @@ export default function DatabasesPage() {
     setError('');
 
     try {
+      const payload: any = {
+        name: newDbName,
+        type: dbType,
+      };
+
+      if (dbType === 'postgres') {
+        payload.username = newDbUsername;
+        payload.password = newDbPassword || undefined;
+      } else {
+        payload.container_id = selectedContainerId;
+        payload.db_path = sqlitePath;
+      }
+
       const res = await fetch('/api/databases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newDbName,
-          username: newDbUsername,
-          password: newDbPassword || undefined, // Let backend generate if empty
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -122,6 +152,9 @@ export default function DatabasesPage() {
       setNewDbName('');
       setNewDbUsername('docklite');
       setNewDbPassword('');
+      setSqlitePath('/app/data/db.sqlite');
+      setSelectedContainerId('');
+      setDbType('postgres');
       setShowCreateForm(false);
       fetchDatabases();
     } catch (err: any) {
@@ -354,8 +387,8 @@ export default function DatabasesPage() {
       </div>
 
       {error && (
-        <div className="mt-4 card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(255, 107, 107, 0.5)' }}>
-          <p className="font-bold flex items-center gap-2" style={{ color: '#ff6b6b' }}>
+        <div className="mt-4 card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(var(--status-error-rgb), 0.5)' }}>
+          <p className="font-bold flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
             <XCircle size={16} weight="duotone" />
             {error}
           </p>
@@ -363,7 +396,7 @@ export default function DatabasesPage() {
       )}
 
       {connectionInfo && (
-        <div className="mt-4 card-vapor p-6 rounded-lg border-2" style={{ borderColor: 'rgba(57, 255, 20, 0.5)' }}>
+        <div className="mt-4 card-vapor p-6 rounded-lg border-2" style={{ borderColor: 'rgba(var(--status-success-rgb), 0.5)' }}>
           <h3 className="text-lg font-bold mb-3 neon-text flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
             <Sparkle size={16} weight="duotone" />
             Database Created Successfully!
@@ -414,7 +447,7 @@ export default function DatabasesPage() {
             className="mt-4 px-3 py-1.5 text-sm rounded-lg font-bold transition-all hover:scale-105"
             style={{
               background: 'linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%)',
-              color: 'var(--bg-darker)',
+              color: 'var(--button-text)',
             }}
           >
             <span className="inline-flex items-center gap-2">
@@ -428,6 +461,35 @@ export default function DatabasesPage() {
       {showCreateForm && (
         <div className="mt-6 card-vapor p-6 rounded-xl">
           <form onSubmit={handleCreate} className="space-y-4">
+            
+            {/* DB Type Selection */}
+            <div className="flex gap-4 mb-4">
+              <button
+                type="button"
+                onClick={() => setDbType('postgres')}
+                className={`flex-1 p-3 rounded-lg border-2 font-bold transition-all flex items-center justify-center gap-2 ${
+                  dbType === 'postgres'
+                    ? 'border-[var(--neon-cyan)] bg-[rgba(var(--neon-cyan-rgb),0.1)] text-[var(--neon-cyan)]'
+                    : 'border-transparent bg-[var(--surface-dim)] text-[var(--text-secondary)] hover:bg-[var(--surface-highlight)]'
+                }`}
+              >
+                <Database size={20} weight={dbType === 'postgres' ? 'duotone' : 'regular'} />
+                PostgreSQL
+              </button>
+              <button
+                type="button"
+                onClick={() => setDbType('sqlite')}
+                className={`flex-1 p-3 rounded-lg border-2 font-bold transition-all flex items-center justify-center gap-2 ${
+                  dbType === 'sqlite'
+                    ? 'border-[var(--neon-purple)] bg-[rgba(var(--neon-purple-rgb),0.1)] text-[var(--neon-purple)]'
+                    : 'border-transparent bg-[var(--surface-dim)] text-[var(--text-secondary)] hover:bg-[var(--surface-highlight)]'
+                }`}
+              >
+                <Package size={20} weight={dbType === 'sqlite' ? 'duotone' : 'regular'} />
+                SQLite
+              </button>
+            </div>
+
             <div>
               <label htmlFor="name" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
                 <Database size={16} weight="duotone" />
@@ -447,42 +509,97 @@ export default function DatabasesPage() {
               </p>
             </div>
 
-            <div>
-              <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
-                <UserCircle size={16} weight="duotone" />
-                USERNAME
-              </label>
-              <input
-                type="text"
-                id="username"
-                required
-                value={newDbUsername}
-                onChange={(e) => setNewDbUsername(e.target.value)}
-                className="input-vapor w-full"
-                placeholder="docklite"
-              />
-              <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                Default: docklite
-              </p>
-            </div>
+            {dbType === 'postgres' ? (
+              <>
+                <div>
+                  <label htmlFor="username" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-purple)' }}>
+                    <UserCircle size={16} weight="duotone" />
+                    USERNAME
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    required
+                    value={newDbUsername}
+                    onChange={(e) => setNewDbUsername(e.target.value)}
+                    className="input-vapor w-full"
+                    placeholder="docklite"
+                  />
+                  <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    Default: docklite
+                  </p>
+                </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
-                <Key size={16} weight="duotone" />
-                PASSWORD
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={newDbPassword}
-                onChange={(e) => setNewDbPassword(e.target.value)}
-                className="input-vapor w-full"
-                placeholder="Leave empty for auto-generated password"
-              />
-              <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                Leave empty to auto-generate a secure password
-              </p>
-            </div>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
+                    <Key size={16} weight="duotone" />
+                    PASSWORD
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={newDbPassword}
+                    onChange={(e) => setNewDbPassword(e.target.value)}
+                    className="input-vapor w-full"
+                    placeholder="Leave empty for auto-generated password"
+                  />
+                  <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    Leave empty to auto-generate a secure password
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="container" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-green)' }}>
+                    <Package size={16} weight="duotone" />
+                    HOST CONTAINER
+                  </label>
+                  {fetchingContainers ? (
+                     <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                       <SpinnerGap className="animate-spin" /> Loading containers...
+                     </div>
+                  ) : (
+                    <select
+                      id="container"
+                      required
+                      value={selectedContainerId}
+                      onChange={(e) => setSelectedContainerId(e.target.value)}
+                      className="input-vapor w-full"
+                    >
+                      <option value="">Select a container...</option>
+                      {availableContainers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.image})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    Select the container where the SQLite file will be stored
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="path" className="block text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
+                    <LinkSimple size={16} weight="duotone" />
+                    FILE PATH
+                  </label>
+                  <input
+                    type="text"
+                    id="path"
+                    required
+                    value={sqlitePath}
+                    onChange={(e) => setSqlitePath(e.target.value)}
+                    className="input-vapor w-full"
+                    placeholder="/app/data/db.sqlite"
+                  />
+                  <p className="mt-2 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    Absolute path inside the container
+                  </p>
+                </div>
+              </>
+            )}
 
             <button
               type="submit"
@@ -497,7 +614,7 @@ export default function DatabasesPage() {
               ) : (
                 <span className="inline-flex items-center gap-2">
                   <Sparkle size={16} weight="duotone" />
-                  Create PostgreSQL Database
+                  Create {dbType === 'postgres' ? 'PostgreSQL' : 'SQLite'} Database
                 </span>
               )}
             </button>
@@ -530,17 +647,17 @@ export default function DatabasesPage() {
                 key={db.id}
                 className="p-6 rounded-xl transition-all hover:scale-[1.02] relative"
                 style={{
-                  background: 'rgba(10, 5, 20, 0.3)',
+                  background: 'var(--surface-dim)',
                   backdropFilter: 'blur(12px)',
                   border: '2px solid var(--neon-green)',
                   boxShadow: `
-                    0 0 3px rgba(107, 255, 176, 1),
-                    0 0 6px rgba(107, 255, 176, 0.7),
-                    0 0 12px rgba(107, 255, 176, 0.5),
-                    0 0 18px rgba(107, 255, 176, 0.35),
-                    inset 0 0 2px rgba(107, 255, 176, 0.9),
-                    inset 0 0 4px rgba(107, 255, 176, 0.6),
-                    inset 0 0 8px rgba(107, 255, 176, 0.4)
+                    0 0 3px rgba(var(--neon-green-rgb), 1),
+                    0 0 6px rgba(var(--neon-green-rgb), 0.7),
+                    0 0 12px rgba(var(--neon-green-rgb), 0.5),
+                    0 0 18px rgba(var(--neon-green-rgb), 0.35),
+                    inset 0 0 2px rgba(var(--neon-green-rgb), 0.9),
+                    inset 0 0 4px rgba(var(--neon-green-rgb), 0.6),
+                    inset 0 0 8px rgba(var(--neon-green-rgb), 0.4)
                   `,
                 }}
               >
@@ -568,8 +685,8 @@ export default function DatabasesPage() {
                       border: '2px solid var(--neon-purple)',
                       color: 'var(--neon-purple)',
                       boxShadow: `
-                        0 0 5px rgba(181, 55, 242, 0.6),
-                        0 0 10px rgba(181, 55, 242, 0.3)
+                        0 0 5px rgba(var(--neon-purple-rgb), 0.6),
+                        0 0 10px rgba(var(--neon-purple-rgb), 0.3)
                       `,
                     }}
                     title="Database actions"
@@ -594,9 +711,9 @@ export default function DatabasesPage() {
                           style={{
                             top: menuPosition.top,
                             left: menuPosition.left,
-                            background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.98) 0%, rgba(10, 5, 30, 0.98) 100%)',
+                            background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
                             border: '1px solid var(--neon-purple)',
-                            boxShadow: '0 0 20px rgba(181, 55, 242, 0.4)',
+                            boxShadow: '0 0 20px rgba(var(--neon-purple-rgb), 0.4)',
                             width: '200px',
                             maxWidth: 'calc(100vw - 24px)',
                           }}
@@ -645,8 +762,8 @@ export default function DatabasesPage() {
                               setTimeout(() => openDeleteModal(db), 0);
                             }}
                             onMouseDown={stopMenu}
-                            className="w-full px-4 py-3 text-left text-sm font-bold transition-all hover:bg-red-500/20 flex items-center gap-3"
-                            style={{ color: '#ff6b6b' }}
+                            className="w-full px-4 py-3 text-left text-sm font-bold transition-all flex items-center gap-3 hover:bg-white/5"
+                            style={{ color: 'var(--status-error)' }}
                           >
                             <Trash size={16} weight="duotone" />
                             Delete Database
@@ -675,7 +792,7 @@ export default function DatabasesPage() {
 
                 {/* Header with centered database icon */}
                 <div className="mb-4">
-                  <h3 className="text-xl font-bold neon-text truncate" style={{ color: 'var(--neon-cyan)' }}>
+                  <h3 className="docklite-db-title text-xl font-bold neon-text truncate" style={{ color: 'var(--neon-cyan)' }}>
                     {db.name}
                   </h3>
                   <div className="mt-3 flex justify-center pointer-events-none">
@@ -685,7 +802,7 @@ export default function DatabasesPage() {
                       className="animate-wobble"
                       style={{
                         color: 'var(--neon-cyan)',
-                        filter: 'drop-shadow(0 0 8px rgba(79, 214, 255, 0.7)) drop-shadow(0 0 14px rgba(79, 214, 255, 0.45))',
+                        filter: 'drop-shadow(0 0 8px rgba(var(--neon-cyan-rgb), 0.7)) drop-shadow(0 0 14px rgba(var(--neon-cyan-rgb), 0.45))',
                       }}
                     />
                   </div>
@@ -697,10 +814,10 @@ export default function DatabasesPage() {
                     className="inline-block px-3 py-1 rounded-full text-xs font-bold"
                     style={{
                       background: db.size === 0
-                        ? 'rgba(100, 100, 100, 0.2)'
-                        : 'rgba(57, 255, 20, 0.2)',
-                      color: db.size === 0 ? '#999' : 'var(--neon-green)',
-                      border: `1px solid ${db.size === 0 ? '#666' : 'var(--neon-green)'}`,
+                        ? 'rgba(var(--text-muted-rgb), 0.2)'
+                        : 'rgba(var(--status-success-rgb), 0.2)',
+                      color: db.size === 0 ? 'var(--text-muted)' : 'var(--neon-green)',
+                      border: `1px solid ${db.size === 0 ? 'var(--text-muted)' : 'var(--neon-green)'}`,
                     }}
                   >
                             {db.size === 0 ? '○ EMPTY' : `● ${formatBytes(db.size)}`} {getSizeLabel(db.sizeCategory)}
@@ -709,22 +826,34 @@ export default function DatabasesPage() {
 
                 {/* Info */}
                 <div className="space-y-2 text-sm font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                      <Plug size={12} weight="duotone" />
-                      Port:
-                    </span>
-                    <span className="font-bold" style={{ color: 'var(--neon-purple)' }}>
-                      {db.postgres_port}
-                    </span>
-                  </div>
+                  {db.type === 'sqlite' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                        <LinkSimple size={12} weight="duotone" />
+                        Path:
+                      </span>
+                      <span className="font-bold truncate" title={db.db_path} style={{ color: 'var(--neon-yellow)' }}>
+                        {db.db_path}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                        <Plug size={12} weight="duotone" />
+                        Port:
+                      </span>
+                      <span className="font-bold" style={{ color: 'var(--neon-purple)' }}>
+                        {db.postgres_port}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className="opacity-60 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                       <Info size={12} weight="duotone" />
                       ID:
                     </span>
                     <span className="opacity-70 text-xs">
-                      {db.container_id.substring(0, 12)}
+                      {db.container_id ? db.container_id.substring(0, 12) : `sqlite-${db.id}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -739,10 +868,16 @@ export default function DatabasesPage() {
                 </div>
 
                 {/* Connection hint */}
-                <div className="mt-4 pt-4 border-t border-purple-500/20">
-                  <p className="text-xs font-mono opacity-60 mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    Connect: localhost:{db.postgres_port}
-                  </p>
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.2)' }}>
+                  {db.type === 'sqlite' ? (
+                    <p className="text-xs font-mono opacity-60 mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      File-based database in container
+                    </p>
+                  ) : (
+                    <p className="text-xs font-mono opacity-60 mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      Connect: localhost:{db.postgres_port}
+                    </p>
+                  )}
                   <p className="text-xs font-mono opacity-60" style={{ color: 'var(--text-secondary)' }}>
                     Use the menu for credentials or deletion.
                   </p>
@@ -753,7 +888,7 @@ export default function DatabasesPage() {
         )}
       </div>
 
-      <div className="mt-8 card-vapor p-6 rounded-xl border-2" style={{ borderColor: 'rgba(0, 255, 255, 0.3)' }}>
+      <div className="mt-8 card-vapor p-6 rounded-xl border-2" style={{ borderColor: 'rgba(var(--neon-cyan-rgb), 0.3)' }}>
         <div className="flex items-start gap-3">
           <Lightbulb size={22} weight="duotone" />
           <div>
@@ -816,7 +951,7 @@ export default function DatabasesPage() {
                 />
               </div>
 
-              <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 165, 0, 0.1)', border: '1px solid rgba(255, 165, 0, 0.3)' }}>
+              <div className="p-4 rounded-lg" style={{ background: 'rgba(var(--status-warning-rgb), 0.1)', border: '1px solid rgba(var(--status-warning-rgb), 0.3)' }}>
                 <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
                   <WarningCircle size={14} weight="duotone" />
                   This will update the PostgreSQL user credentials in the database container.
@@ -834,7 +969,7 @@ export default function DatabasesPage() {
                   }}
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'rgba(100, 100, 100, 0.3)',
+                    background: 'rgba(var(--text-muted-rgb), 0.3)',
                     border: '2px solid var(--text-secondary)',
                     color: 'var(--text-secondary)',
                   }}
@@ -850,7 +985,7 @@ export default function DatabasesPage() {
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
-                    color: 'white',
+                    color: 'var(--button-text)',
                   }}
                 >
                   {creating ? (
@@ -874,12 +1009,12 @@ export default function DatabasesPage() {
       {/* Delete Database Modal */}
       {deleteDb && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: '#ff6b6b' }}>
+          <div className="card-vapor max-w-lg w-full p-8 border-2" style={{ borderColor: 'var(--status-error)' }}>
             <div className="mb-6 text-center">
               <div className="flex justify-center mb-4">
-                <WarningCircle size={36} weight="duotone" color="#ff6b6b" />
+                <WarningCircle size={36} weight="duotone" color="var(--status-error)" />
               </div>
-              <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: '#ff6b6b' }}>
+              <h2 className="text-2xl font-bold neon-text mb-2" style={{ color: 'var(--status-error)' }}>
                 Delete Database
               </h2>
               <p className="text-sm font-mono opacity-80" style={{ color: 'var(--text-secondary)' }}>
@@ -888,8 +1023,8 @@ export default function DatabasesPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 rounded-lg border border-red-500/40" style={{ background: 'rgba(255, 107, 107, 0.08)' }}>
-                <p className="text-xs font-mono" style={{ color: '#ff6b6b' }}>
+              <div className="p-4 rounded-lg border" style={{ background: 'rgba(var(--status-error-rgb), 0.08)', borderColor: 'rgba(var(--status-error-rgb), 0.4)' }}>
+                <p className="text-xs font-mono" style={{ color: 'var(--status-error)' }}>
                   Type <span className="font-bold">{deleteDb.name}</span> to confirm deletion.
                 </p>
               </div>
@@ -917,7 +1052,7 @@ export default function DatabasesPage() {
                   }}
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'rgba(100, 100, 100, 0.3)',
+                    background: 'rgba(var(--text-muted-rgb), 0.3)',
                     border: '2px solid var(--text-secondary)',
                     color: 'var(--text-secondary)',
                   }}
@@ -933,8 +1068,8 @@ export default function DatabasesPage() {
                   onClick={handleDelete}
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
-                    color: 'white',
+                    background: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
+                    color: 'var(--button-text)',
                   }}
                 >
                   {deletingDb ? (
@@ -1009,7 +1144,7 @@ export default function DatabasesPage() {
                   }}
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'rgba(100, 100, 100, 0.3)',
+                    background: 'rgba(var(--text-muted-rgb), 0.3)',
                     border: '2px solid var(--text-secondary)',
                     color: 'var(--text-secondary)',
                   }}
@@ -1025,7 +1160,7 @@ export default function DatabasesPage() {
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
                     background: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
-                    color: 'white',
+                    color: 'var(--button-text)',
                   }}
                 >
                   <span className="inline-flex items-center gap-2">
@@ -1091,12 +1226,13 @@ export default function DatabasesPage() {
                   type="checkbox"
                   checked={downloadGzip}
                   onChange={(e) => setDownloadGzip(e.target.checked)}
-                  className="h-4 w-4 accent-green-400"
+                  className="h-4 w-4"
+                  style={{ accentColor: 'var(--neon-green)' }}
                 />
                 Gzip compress download
               </label>
 
-              <div className="p-4 rounded-lg border" style={{ background: 'rgba(255, 165, 0, 0.1)', borderColor: 'rgba(255, 165, 0, 0.35)' }}>
+              <div className="p-4 rounded-lg border" style={{ background: 'rgba(var(--status-warning-rgb), 0.1)', borderColor: 'rgba(var(--status-warning-rgb), 0.35)' }}>
                 <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--neon-yellow)' }}>
                   <WarningCircle size={14} weight="duotone" />
                   This backs up the database only. Files/uploads are separate.
@@ -1114,7 +1250,7 @@ export default function DatabasesPage() {
                   }}
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'rgba(100, 100, 100, 0.3)',
+                    background: 'rgba(var(--text-muted-rgb), 0.3)',
                     border: '2px solid var(--text-secondary)',
                     color: 'var(--text-secondary)',
                   }}
@@ -1131,7 +1267,7 @@ export default function DatabasesPage() {
                   className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     background: 'linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%)',
-                    color: 'white',
+                    color: 'var(--button-text)',
                   }}
                 >
                   {downloadingDb ? (

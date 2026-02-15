@@ -19,10 +19,11 @@ func ProxyHandler(nextjsURL string) http.Handler {
 	// Customize the director to preserve the original request
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
+		origHost := req.Host
 		originalDirector(req)
-		req.Host = target.Host
-		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.Header.Set("X-Forwarded-Host", origHost)
 		req.Header.Set("X-Forwarded-Proto", "http")
+		req.Host = target.Host
 	}
 
 	// Custom error handler

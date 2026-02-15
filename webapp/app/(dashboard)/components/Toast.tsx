@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, WarningCircle, Info, X } from '@phosphor-icons/react';
 
 export interface ToastProps {
@@ -11,34 +11,41 @@ export interface ToastProps {
 }
 
 export default function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(onClose, 300); // Wait for exit animation
+  };
+
   useEffect(() => {
     if (duration > 0) {
-      const timer = setTimeout(onClose, duration);
+      const timer = setTimeout(handleClose, duration);
       return () => clearTimeout(timer);
     }
-  }, [duration, onClose]);
+  }, [duration]);
 
   const typeStyles = {
     success: {
-      bg: 'rgba(57, 255, 20, 0.15)',
+      bg: 'rgba(var(--status-success-rgb), 0.15)',
       border: 'var(--neon-green)',
       color: 'var(--neon-green)',
       icon: <CheckCircle size={22} weight="duotone" />,
     },
     error: {
-      bg: 'rgba(255, 107, 107, 0.15)',
-      border: '#ff6b6b',
-      color: '#ff6b6b',
+      bg: 'rgba(var(--status-error-rgb), 0.15)',
+      border: 'var(--status-error)',
+      color: 'var(--status-error)',
       icon: <XCircle size={22} weight="duotone" />,
     },
     warning: {
-      bg: 'rgba(255, 200, 87, 0.15)',
+      bg: 'rgba(var(--status-warning-rgb), 0.15)',
       border: 'var(--neon-yellow)',
       color: 'var(--neon-yellow)',
       icon: <WarningCircle size={22} weight="duotone" />,
     },
     info: {
-      bg: 'rgba(0, 255, 255, 0.15)',
+      bg: 'rgba(var(--neon-cyan-rgb), 0.15)',
       border: 'var(--neon-cyan)',
       color: 'var(--neon-cyan)',
       icon: <Info size={22} weight="duotone" />,
@@ -49,25 +56,28 @@ export default function Toast({ message, type, onClose, duration = 5000 }: Toast
 
   return (
     <div
-      className="fixed top-24 right-6 z-[100000] min-w-[300px] max-w-md card-vapor p-4 rounded-xl border-2 shadow-2xl animate-slide-in-right"
+      className={`fixed top-24 right-6 z-[100000] min-w-[300px] max-w-md card-vapor p-4 rounded-xl border-2 shadow-2xl transition-all duration-300 ${
+        isExiting ? 'animate-slide-out-right' : 'animate-slide-in-right'
+      }`}
       style={{
         background: style.bg,
         borderColor: style.border,
         backdropFilter: 'blur(12px)',
+        boxShadow: `0 0 30px ${style.border}40, 0 10px 40px rgba(0, 0, 0, 0.3)`,
       }}
     >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0" style={{ color: style.color }}>
+        <div className="flex-shrink-0 animate-pulse-subtle" style={{ color: style.color }}>
           {style.icon}
         </div>
         <div className="flex-1">
-          <p className="font-bold text-sm" style={{ color: style.color }}>
+          <p className="font-bold text-sm leading-relaxed" style={{ color: style.color }}>
             {message}
           </p>
         </div>
         <button
-          onClick={onClose}
-          className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+          onClick={handleClose}
+          className="flex-shrink-0 opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-200"
           style={{ color: style.color }}
         >
           <X size={18} weight="bold" />

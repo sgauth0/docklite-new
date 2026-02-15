@@ -32,24 +32,28 @@ function buildCookieHeader(): string {
 }
 
 export async function getAgentUser(): Promise<UserSession | null> {
-  const baseURL = resolveAgentURL();
-  if (!baseURL) return null;
+  try {
+    const baseURL = resolveAgentURL();
+    if (!baseURL) return null;
 
-  const cookieHeader = buildCookieHeader();
-  const res = await fetch(`${baseURL}/api/auth/me`, {
-    method: 'GET',
-    headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
-    cache: 'no-store',
-  });
-  if (!res.ok) return null;
-  const payload = await res.json();
-  const user = payload?.user;
-  if (!user) return null;
+    const cookieHeader = buildCookieHeader();
+    const res = await fetch(`${baseURL}/api/auth/me`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const payload = await res.json();
+    const user = payload?.user;
+    if (!user) return null;
 
-  return {
-    userId: user.userId ?? user.id ?? 0,
-    username: user.username ?? '',
-    isAdmin: Boolean(user.isAdmin),
-    role: user.role ?? (user.isAdmin ? 'admin' : 'user'),
-  };
+    return {
+      userId: user.userId ?? user.id ?? 0,
+      username: user.username ?? '',
+      isAdmin: Boolean(user.isAdmin),
+      role: user.role ?? (user.isAdmin ? 'admin' : 'user'),
+    };
+  } catch {
+    return null;
+  }
 }

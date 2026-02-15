@@ -104,9 +104,9 @@ export default function SslStatus() {
       case 'valid':
         return 'var(--neon-green)';
       case 'expiring':
-        return '#ffa500';
+        return 'var(--status-warning)';
       case 'expired':
-        return '#ff6b6b';
+        return 'var(--status-error)';
       default:
         return 'var(--text-secondary)';
     }
@@ -155,7 +155,7 @@ export default function SslStatus() {
               {typeof meta?.allCount === 'number' && <div>Total certs: {meta.allCount}</div>}
             </div>
             {error && (
-              <div className="text-xs font-bold mt-1 flex items-center gap-2" style={{ color: '#ff6b6b' }}>
+              <div className="text-xs font-bold mt-1 flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
                 <XCircle size={14} weight="duotone" />
                 {error}
               </div>
@@ -221,7 +221,7 @@ export default function SslStatus() {
                 <tr
                   key={cert.domain}
                   className="hover:bg-white/5 transition-colors"
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                  style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
                 >
                   <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
                     {cert.domain}
@@ -295,7 +295,7 @@ export default function SslStatus() {
                     <tr
                       key={cert.domain}
                       className="hover:bg-white/5 transition-colors"
-                      style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                      style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
                     >
                       <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
                         {cert.domain}
