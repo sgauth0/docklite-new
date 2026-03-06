@@ -32,6 +32,11 @@ func main() {
 	}
 	defer sqliteStore.Close()
 
+	// Initialize tables needed by the agent
+	if err := sqliteStore.InitializeAgentTables(); err != nil {
+		log.Fatalf("failed to initialize agent tables: %v", err)
+	}
+
 	if err := handlers.EnsureBootstrapToken(sqliteStore, cfg.Token); err != nil {
 		log.Fatalf("failed to ensure bootstrap token: %v", err)
 	}
