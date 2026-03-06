@@ -129,6 +129,7 @@ mkdir -p ./logs
 echo -e "${GREEN}Starting Next.js GUI on port $GUI_PORT...${NC}"
 cd webapp
 PORT=$GUI_PORT \
+HOSTNAME="0.0.0.0" \
 DATABASE_PATH="../$DATABASE_PATH" \
 AGENT_URL="http://localhost:$AGENT_PORT" \
 AGENT_TOKEN="$DOCKLITE_TOKEN" \
