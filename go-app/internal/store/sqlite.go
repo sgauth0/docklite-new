@@ -47,8 +47,25 @@ func (s *SQLiteStore) Close() error {
 
 // InitializeAgentTables creates tables needed by the agent if they don't exist
 func (s *SQLiteStore) InitializeAgentTables() error {
-	// Create tokens table if it doesn't exist
+	// Create users table if it doesn't exist
 	_, err := s.DB.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT UNIQUE NOT NULL,
+			password_hash TEXT NOT NULL,
+			is_admin INTEGER DEFAULT 0,
+			role TEXT DEFAULT 'user',
+			is_super_admin INTEGER DEFAULT 0,
+			managed_by INTEGER,
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create tokens table if it doesn't exist
+	_, err = s.DB.Exec(`
 		CREATE TABLE IF NOT EXISTS tokens (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
