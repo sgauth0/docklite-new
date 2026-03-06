@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -80,7 +79,7 @@ func (h *Handlers) SSLStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(uniqueHosts) == 0 {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := dockerContext(r.Context())
 		defer cancel()
 		containers, err := h.docker.ListContainers(ctx, true)
 		if err == nil {
@@ -195,7 +194,7 @@ func (h *Handlers) SSLRepair(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Domain string `json:"domain"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -209,7 +208,7 @@ func (h *Handlers) SSLRepair(w http.ResponseWriter, r *http.Request) {
 		trafName = defaultTraefikName
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := dockerContext(r.Context())
 	defer cancel()
 
 	args := filters.NewArgs()

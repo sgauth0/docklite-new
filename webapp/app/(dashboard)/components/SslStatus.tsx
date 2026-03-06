@@ -2,6 +2,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Lock,
+  CheckCircle,
+  WarningCircle,
+  XCircle,
+  Circle,
+  ArrowClockwise,
+  SpinnerGap,
+} from '@phosphor-icons/react';
 import { useToast } from '@/lib/hooks/useToast';
 
 interface SslStatus {
@@ -95,9 +104,9 @@ export default function SslStatus() {
       case 'valid':
         return 'var(--neon-green)';
       case 'expiring':
-        return '#ffa500';
+        return 'var(--status-warning)';
       case 'expired':
-        return '#ff6b6b';
+        return 'var(--status-error)';
       default:
         return 'var(--text-secondary)';
     }
@@ -106,13 +115,13 @@ export default function SslStatus() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'valid':
-        return '✓';
+        return <CheckCircle size={14} weight="duotone" />;
       case 'expiring':
-        return '⚠';
+        return <WarningCircle size={14} weight="duotone" />;
       case 'expired':
-        return '✗';
+        return <XCircle size={14} weight="duotone" />;
       default:
-        return '○';
+        return <Circle size={14} weight="duotone" />;
     }
   };
 
@@ -135,8 +144,9 @@ export default function SslStatus() {
       <div className="card-vapor p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h2 className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-              🔒 SSL Certificates (DockLite Managed)
+            <h2 className="text-2xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <Lock size={20} weight="duotone" />
+              SSL Certificates (DockLite Managed)
             </h2>
             <div className="text-xs font-mono mt-1 space-y-1" style={{ color: 'var(--text-secondary)' }}>
               <div>Last checked: {lastChecked ? lastChecked.toLocaleTimeString() : '—'}</div>
@@ -145,8 +155,9 @@ export default function SslStatus() {
               {typeof meta?.allCount === 'number' && <div>Total certs: {meta.allCount}</div>}
             </div>
             {error && (
-              <div className="text-xs font-bold mt-1" style={{ color: '#ff6b6b' }}>
-                ❌ {error}
+              <div className="text-xs font-bold mt-1 flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
+                <XCircle size={14} weight="duotone" />
+                {error}
               </div>
             )}
           </div>
@@ -163,13 +174,24 @@ export default function SslStatus() {
               disabled={refreshing}
               className="btn-neon px-4 py-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {refreshing ? 'Refreshing…' : 'Refresh'}
+              {refreshing ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                  Refreshing…
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <ArrowClockwise size={14} weight="duotone" />
+                  Refresh
+                </span>
+              )}
             </button>
           </div>
         </div>
       {loading ? (
-        <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-          ⟳ Loading SSL status...
+        <div className="text-sm font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+          <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+          Loading SSL status...
         </div>
       ) : sslStatus.length === 0 ? (
         <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
@@ -199,7 +221,7 @@ export default function SslStatus() {
                 <tr
                   key={cert.domain}
                   className="hover:bg-white/5 transition-colors"
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                  style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
                 >
                   <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
                     {cert.domain}
@@ -273,7 +295,7 @@ export default function SslStatus() {
                     <tr
                       key={cert.domain}
                       className="hover:bg-white/5 transition-colors"
-                      style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                      style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
                     >
                       <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
                         {cert.domain}

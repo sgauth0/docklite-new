@@ -8,9 +8,8 @@ import AllContainersModal from './components/AllContainersModal';
 import AddFolderModal from './components/AddFolderModal';
 import FolderSection from './components/FolderSection';
 import SkeletonLoader from './components/SkeletonLoader';
-import SslStatus from './components/SslStatus';
 import { useToast } from '@/lib/hooks/useToast';
-import { Flower, Database, Lightning, Package, ArrowsClockwise, FolderPlus, PlusCircle } from '@phosphor-icons/react';
+import { Database, Lightning, Package, ArrowsClockwise, FolderPlus, PlusCircle, WarningCircle, SpinnerGap } from '@phosphor-icons/react';
 import AddContainerModal from './components/AddContainerModal';
 import {
   DndContext,
@@ -205,16 +204,6 @@ export default function DashboardPage() {
     return 'other';
   };
 
-  const getContainerBadge = (container: ContainerInfo): React.ReactNode => {
-    const type = getContainerType(container);
-    const iconStyle = {
-      color: '#00ffff',
-      filter: 'drop-shadow(0 0 6px #00ffff80) drop-shadow(0 0 10px #00ffff60)',
-    };
-    if (type === 'site') return <Flower size={32} weight="duotone" style={iconStyle} />;
-    if (type === 'database') return <Database size={32} weight="duotone" style={iconStyle} />;
-    return <Lightning size={32} weight="duotone" style={iconStyle} />;
-  };
 
   const filterContainers = (containers: ContainerInfo[]): ContainerInfo[] => {
     if (filterType === 'all') return containers;
@@ -472,11 +461,13 @@ export default function DashboardPage() {
     return (
       <div className="max-w-[1400px] mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-            📦 Containers
+          <h1 className="docklite-containers-title text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <Package size={26} weight="duotone" />
+            Containers
           </h1>
-          <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-            ▶ LOADING... ◀
+          <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+            <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+            Loading...
           </p>
         </div>
         <SkeletonLoader type="card" count={6} />
@@ -488,8 +479,10 @@ export default function DashboardPage() {
     return (
       <div className="text-center py-16">
         <div className="mb-8">
-          <div className="text-6xl mb-4 animate-pulse">⚠️</div>
-          <div className="text-xl font-bold mb-2" style={{ color: '#ff6b6b' }}>
+          <div className="flex justify-center mb-4 animate-pulse">
+            <WarningCircle size={48} weight="duotone" color="var(--status-error)" />
+          </div>
+          <div className="text-xl font-bold mb-2" style={{ color: 'var(--status-error)' }}>
             System Error Detected
           </div>
           <button onClick={fetchData} className="btn-neon px-6 py-3 font-bold inline-flex items-center gap-2">
@@ -505,15 +498,16 @@ export default function DashboardPage() {
     <div className="max-w-[1400px] mx-auto">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-            📦 Containers
+          <h1 className="docklite-containers-title text-3xl lg:text-4xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+            <Package size={26} weight="duotone" />
+            Containers
           </h1>
           <div className="flex items-center gap-3">
             <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-              ▶ SYSTEM STATUS: ONLINE ◀
+              System status: online
             </p>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full" style={{
-              background: 'rgba(57, 255, 20, 0.2)',
+              background: 'rgba(var(--status-success-rgb), 0.2)',
               color: 'var(--neon-green)',
               border: '1px solid var(--neon-green)'
             }}>
@@ -534,8 +528,8 @@ export default function DashboardPage() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all hover:scale-105"
             style={{
               background: 'linear-gradient(135deg, var(--neon-pink) 0%, var(--neon-purple) 100%)',
-              color: 'white',
-              boxShadow: '0 0 12px rgba(217, 15, 217, 0.4)',
+              color: 'var(--button-text)',
+              boxShadow: '0 0 12px rgba(var(--neon-pink-rgb), 0.4)',
             }}
           >
             <FolderPlus size={20} weight="duotone" />
@@ -559,7 +553,7 @@ export default function DashboardPage() {
           className="input-vapor px-4 py-2 text-sm font-bold"
           style={{
             minWidth: '200px',
-            background: 'rgba(15, 5, 30, 0.7)',
+            background: 'var(--surface-muted)',
             border: '2px solid var(--neon-cyan)',
           }}
         >
@@ -570,29 +564,58 @@ export default function DashboardPage() {
       </div>
 
       {totalContainers === 0 ? (
-        <div className="mt-12 text-center py-16 card-vapor max-w-2xl mx-auto">
-          <p className="text-xl font-bold neon-text mb-4" style={{ color: 'var(--neon-pink)' }}>
-            No containers detected
+        <div className="mt-12 text-center py-20 card-vapor max-w-3xl mx-auto animate-fade-in">
+          <div className="flex justify-center mb-6 animate-float">
+            <Package size={80} weight="duotone" style={{ color: 'var(--neon-cyan)', filter: 'drop-shadow(0 0 20px var(--neon-cyan))' }} />
+          </div>
+          <h2 className="text-3xl font-bold neon-text mb-3" style={{ color: 'var(--neon-pink)' }}>
+            Welcome to DockLite!
+          </h2>
+          <p className="text-lg mb-2" style={{ color: 'var(--text-secondary)' }}>
+            No containers detected yet
           </p>
-          <button
-            onClick={() => setShowAllContainersModal(true)}
-            className="btn-neon inline-flex items-center gap-2"
-          >
-            <Package size={20} weight="duotone" />
-            View Containers
-          </button>
+          <p className="text-sm mb-8 max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>
+            Get started by viewing all running containers on your system, or create a new one from our templates.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <button
+              onClick={() => setShowAllContainersModal(true)}
+              className="btn-neon inline-flex items-center gap-2 text-base px-6 py-3"
+            >
+              <Package size={22} weight="duotone" />
+              View All Containers
+            </button>
+            <button
+              onClick={() => setShowAddContainerModal(true)}
+              className="inline-flex items-center gap-2 text-base px-6 py-3 rounded-xl font-bold transition-all hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-pink) 100%)',
+                color: 'var(--button-text)',
+                boxShadow: '0 0 20px rgba(var(--neon-purple-rgb), 0.4)'
+              }}
+            >
+              <PlusCircle size={22} weight="duotone" />
+              Create Container
+            </button>
+          </div>
         </div>
       ) : filteredFolders.length === 0 ? (
-        <div className="mt-12 text-center py-16 card-vapor max-w-2xl mx-auto">
-          <p className="text-xl font-bold neon-text mb-4" style={{ color: 'var(--neon-pink)' }}>
+        <div className="mt-12 text-center py-16 card-vapor max-w-2xl mx-auto animate-fade-in">
+          <div className="flex justify-center mb-4 opacity-50">
+            <WarningCircle size={64} weight="duotone" style={{ color: 'var(--neon-yellow)' }} />
+          </div>
+          <p className="text-xl font-bold neon-text mb-3" style={{ color: 'var(--neon-pink)' }}>
             No containers match this filter
+          </p>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+            Try selecting a different filter to see your containers
           </p>
           <button
             onClick={() => setFilterType('all')}
             className="btn-neon inline-flex items-center gap-2"
           >
             <ArrowsClockwise size={20} weight="duotone" />
-            Show All
+            Show All Containers
           </button>
         </div>
       ) : (
@@ -606,7 +629,6 @@ export default function DashboardPage() {
               <FolderSection
                 key={folderNode.id}
                 folderNode={folderNode}
-                getContainerBadge={getContainerBadge}
                 onAction={handleAction}
                 onViewDetails={(id, name) => {
                   setSelectedContainerId(id);
@@ -629,11 +651,6 @@ export default function DashboardPage() {
           </div>
         </DndContext>
       )}
-
-      {/* SSL Certificates Status */}
-      <div className="mt-12">
-        <SslStatus />
-      </div>
 
       {selectedContainerId && (
         <ContainerDetailsModal
@@ -668,7 +685,8 @@ export default function DashboardPage() {
               </h2>
               <button
                 onClick={() => setAssignTarget(null)}
-                className="text-gray-400 hover:text-neon-cyan transition-colors"
+                className="transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 ✕
               </button>
@@ -694,15 +712,22 @@ export default function DashboardPage() {
               </select>
             </div>
             {assignError && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
-                <p className="text-sm text-red-400">{assignError}</p>
+              <div className="mb-4 p-3 rounded-lg" style={{
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                border: '1px solid rgba(var(--status-error-rgb), 0.5)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--status-error)' }}>{assignError}</p>
               </div>
             )}
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setAssignTarget(null)}
-                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 transition-colors"
+                style={{
+                  borderColor: 'var(--surface-dim)',
+                  color: 'var(--text-primary)'
+                }}
                 disabled={assignLoading}
               >
                 Cancel
@@ -729,7 +754,8 @@ export default function DashboardPage() {
               </h2>
               <button
                 onClick={() => setMoveTarget(null)}
-                className="text-gray-400 hover:text-neon-cyan transition-colors"
+                className="transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 ✕
               </button>
@@ -755,15 +781,22 @@ export default function DashboardPage() {
               </select>
             </div>
             {moveError && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
-                <p className="text-sm text-red-400">{moveError}</p>
+              <div className="mb-4 p-3 rounded-lg" style={{
+                background: 'rgba(var(--status-error-rgb), 0.2)',
+                border: '1px solid rgba(var(--status-error-rgb), 0.5)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--status-error)' }}>{moveError}</p>
               </div>
             )}
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setMoveTarget(null)}
-                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 border-gray-600 text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-bold border-2 transition-colors"
+                style={{
+                  borderColor: 'var(--surface-dim)',
+                  color: 'var(--text-primary)'
+                }}
               >
                 Cancel
               </button>

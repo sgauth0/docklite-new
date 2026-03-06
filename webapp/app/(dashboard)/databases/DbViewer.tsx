@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Database, Eye, X, SpinnerGap, XCircle, ChartBar, Key } from '@phosphor-icons/react';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -78,14 +79,17 @@ export default function DbViewer() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold neon-text mb-2" style={{ color: 'var(--neon-cyan)' }}>
-              🗄️ DockLite System Database
+            <h2 className="text-xl font-bold neon-text mb-2 flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <Database size={20} weight="duotone" />
+              DockLite System Database
             </h2>
             <p className="text-xs font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
               Click to inspect internal database structure
             </p>
           </div>
-          <div className="text-3xl">👁️</div>
+          <div className="text-3xl">
+            <Eye size={26} weight="duotone" />
+          </div>
         </div>
       </button>
 
@@ -103,8 +107,9 @@ export default function DbViewer() {
             {/* Modal Header */}
             <div className="p-6 border-b border-purple-500/30 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-                  🗄️ DockLite Database Inspector
+                <h2 className="text-2xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                  <Database size={22} weight="duotone" />
+                  DockLite Database Inspector
                 </h2>
                 <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-secondary)' }}>
                   Internal SQLite database structure
@@ -122,11 +127,14 @@ export default function DbViewer() {
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-lg font-bold transition-all hover:scale-105"
                   style={{
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
+                    background: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
                     color: 'white',
                   }}
                 >
-                  ✕ Close
+                  <span className="inline-flex items-center gap-2">
+                    <X size={14} weight="bold" />
+                    Close
+                  </span>
                 </button>
               </div>
             </div>
@@ -135,16 +143,18 @@ export default function DbViewer() {
             <div className="flex-1 overflow-y-auto p-6">
               {loading && (
                 <div className="text-center py-12">
-                  <div className="text-2xl font-bold neon-text animate-pulse" style={{ color: 'var(--neon-cyan)' }}>
-                    ⟳ Loading...
+                  <div className="text-2xl font-bold neon-text animate-pulse flex items-center justify-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+                    <SpinnerGap size={20} weight="duotone" className="animate-spin" />
+                    Loading...
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(255, 107, 107, 0.5)' }}>
-                  <p className="font-bold" style={{ color: '#ff6b6b' }}>
-                    ❌ Error: {error}
+                <div className="card-vapor p-4 rounded-lg border-2" style={{ borderColor: 'rgba(var(--status-error-rgb), 0.5)' }}>
+                  <p className="font-bold flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
+                    <XCircle size={16} weight="duotone" />
+                    Error: {error}
                   </p>
                 </div>
               )}
@@ -159,7 +169,7 @@ export default function DbViewer() {
                     return (
                       <div key={table.name} className="card-vapor p-6 rounded-xl border border-purple-500/30">
                         <h3 className="text-xl font-bold neon-text mb-4 flex items-center gap-2" style={{ color: 'var(--neon-pink)' }}>
-                          <span>📊</span>
+                          <ChartBar size={16} weight="duotone" />
                           <span>{table.name}</span>
                           <span className="text-xs font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
                             ({rowCount} rows)
@@ -175,7 +185,7 @@ export default function DbViewer() {
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-b-2" style={{ borderColor: 'rgba(181, 55, 242, 0.3)' }}>
+                              <tr className="border-b-2" style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.3)' }}>
                                 {visibleColumns.map((col: any) => (
                                   <th
                                     key={col.name}
@@ -183,7 +193,7 @@ export default function DbViewer() {
                                     style={{ color: 'var(--neon-purple)' }}
                                   >
                                     {col.name}
-                                    {col.pk && <span className="ml-1 text-xs">🔑</span>}
+                                    {col.pk && <Key size={12} weight="duotone" className="ml-1 inline" />}
                                   </th>
                                 ))}
                               </tr>
@@ -204,7 +214,7 @@ export default function DbViewer() {
                                   <tr
                                     key={i}
                                     className="border-b transition-colors hover:bg-purple-900/20"
-                                    style={{ borderColor: 'rgba(181, 55, 242, 0.1)' }}
+                                    style={{ borderColor: 'rgba(var(--neon-purple-rgb), 0.1)' }}
                                   >
                                     {visibleColumns.map((col: any) => (
                                       <td

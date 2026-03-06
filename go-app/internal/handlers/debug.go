@@ -166,7 +166,7 @@ func (h *Handlers) fillDebugDatabase(debugInfo map[string]any) error {
 
 func (h *Handlers) fillDebugDocker(ctx context.Context, debugInfo map[string]any) error {
 	info := debugInfo["docker"].(map[string]any)
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := dockerContext(ctx)
 	defer cancel()
 
 	containers, err := h.docker.ListContainers(ctx, true)

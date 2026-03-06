@@ -30,7 +30,21 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	mux.HandleFunc("/api/files/transfer", handlers.Auth(handlers.TransferFile))
 	mux.HandleFunc("/api/files/folder", handlers.Auth(handlers.DeleteFolder))
 	mux.HandleFunc("/api/server/stats", handlers.Auth(handlers.ServerStats))
+	mux.HandleFunc("/api/server/overview", handlers.Auth(handlers.ServerOverview))
+	mux.HandleFunc("/api/server/updates", handlers.Auth(handlers.ServerUpdates))
+	mux.HandleFunc("/api/server/services", handlers.Auth(handlers.ServerServices))
+	mux.HandleFunc("/api/server/services/action", handlers.Auth(handlers.ServerServiceAction))
+	mux.HandleFunc("/api/server/storage", handlers.Auth(handlers.ServerStorage))
+	mux.HandleFunc("/api/server/storage/prune", handlers.Auth(handlers.ServerStoragePrune))
+	mux.HandleFunc("/api/server/security", handlers.Auth(handlers.ServerSecurity))
+	mux.HandleFunc("/api/server/logs", handlers.Auth(handlers.ServerLogs))
+	mux.HandleFunc("/api/server/diagnostics", handlers.Auth(handlers.ServerDiagnostics))
 	mux.HandleFunc("/api/ports/suggest", handlers.Auth(handlers.SuggestPort))
+	mux.HandleFunc("/api/network/overview", handlers.Auth(handlers.NetworkOverview))
+	mux.HandleFunc("/api/network/firewall", handlers.Auth(handlers.NetworkFirewall))
+	mux.HandleFunc("/api/network/ingress", handlers.Auth(handlers.NetworkIngress))
+	mux.HandleFunc("/api/network/public-ip", handlers.Auth(handlers.NetworkPublicIP))
+	mux.HandleFunc("/api/network/diagnostics", handlers.Auth(handlers.NetworkDiagnostics))
 	mux.HandleFunc("/api/folders", handlers.Auth(handlers.Folders))
 	mux.HandleFunc("/api/folders/", handlers.Auth(handlers.FolderRoutes))
 	mux.HandleFunc("/api/backups", handlers.Auth(handlers.Backups))
@@ -40,6 +54,7 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	mux.HandleFunc("/api/backups/local", handlers.Auth(handlers.LocalBackups))
 	mux.HandleFunc("/api/backups/local/download", handlers.Auth(handlers.LocalBackupDownload))
 	mux.HandleFunc("/api/backups/trigger", handlers.Auth(handlers.BackupTrigger))
+	mux.HandleFunc("/api/backups/export", handlers.Auth(handlers.BackupExport))
 	mux.HandleFunc("/api/dns/config", handlers.Auth(handlers.DNSConfig))
 	mux.HandleFunc("/api/dns/zones", handlers.Auth(handlers.DNSZones))
 	mux.HandleFunc("/api/dns/records", handlers.Auth(handlers.DNSRecords))
@@ -55,6 +70,7 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	mux.HandleFunc("/api/debug", handlers.Auth(handlers.Debug))
 	mux.HandleFunc("/api/tokens", handlers.Auth(handlers.Tokens))
 	mux.HandleFunc("/api/tokens/revoke", handlers.Auth(handlers.TokenRevoke))
+	mux.HandleFunc("/api/auth/login", handlers.AuthLogin)
 	mux.HandleFunc("/api/auth/me", handlers.Auth(handlers.AuthMe))
 	mux.HandleFunc("/api/auth/logout", handlers.Auth(handlers.AuthLogout))
 
@@ -67,27 +83,7 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	// Wrap the mux with a handler that proxies non-API routes
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if this is an agent-handled route
-		if strings.HasPrefix(r.URL.Path, "/api/health") ||
-			strings.HasPrefix(r.URL.Path, "/api/status") ||
-			strings.HasPrefix(r.URL.Path, "/api/summary") ||
-			strings.HasPrefix(r.URL.Path, "/api/containers") ||
-			strings.HasPrefix(r.URL.Path, "/api/databases") ||
-			strings.HasPrefix(r.URL.Path, "/api/files") ||
-			strings.HasPrefix(r.URL.Path, "/api/server") ||
-			strings.HasPrefix(r.URL.Path, "/api/ports") ||
-			strings.HasPrefix(r.URL.Path, "/api/folders") ||
-			strings.HasPrefix(r.URL.Path, "/api/backups") ||
-			strings.HasPrefix(r.URL.Path, "/api/dns") ||
-			strings.HasPrefix(r.URL.Path, "/api/ssl") ||
-			strings.HasPrefix(r.URL.Path, "/api/users") ||
-			strings.HasPrefix(r.URL.Path, "/api/system") ||
-			strings.HasPrefix(r.URL.Path, "/api/db/cleanup") ||
-			strings.HasPrefix(r.URL.Path, "/api/db") ||
-			strings.HasPrefix(r.URL.Path, "/api/debug") ||
-			strings.HasPrefix(r.URL.Path, "/api/tokens") ||
-			strings.HasPrefix(r.URL.Path, "/api/auth/me") ||
-			strings.HasPrefix(r.URL.Path, "/api/auth/logout") {
-			// Agent handles this
+		if r.URL.Path == "/api" || strings.HasPrefix(r.URL.Path, "/api/") {
 			mux.ServeHTTP(w, r)
 		} else if proxy != nil {
 			// Proxy everything else to Next.js

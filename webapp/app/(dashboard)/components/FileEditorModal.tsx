@@ -34,11 +34,11 @@ export default function FileEditorModal({
 
   return createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100000]">
-      <div className="card-vapor neon-border text-white rounded-2xl shadow-2xl w-[min(1100px,94vw)] h-[80vh] flex flex-col border-2 border-purple-500/30">
-        <div className="p-4 border-b border-purple-500/30 flex flex-wrap items-center justify-between gap-3">
+      <div className="card-vapor neon-border text-white rounded-2xl shadow-2xl w-[min(1100px,94vw)] h-[80vh] flex flex-col border-2 border-neon-purple/30">
+        <div className="p-4 border-b border-neon-purple/30 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-purple-200/70">File Editor</div>
-            <div className="text-sm font-bold text-cyan-200 truncate max-w-[70vw]">{filePath}</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-neon-purple/70">File Editor</div>
+            <div className="text-sm font-bold text-neon-cyan truncate max-w-[70vw]">{filePath}</div>
           </div>
           <div className="flex items-center gap-2">
             {!isEditing && (
@@ -65,7 +65,7 @@ export default function FileEditorModal({
             />
           ) : (
             <div className="h-full overflow-auto">
-              <pre className="whitespace-pre-wrap text-sm text-cyan-100">{content}</pre>
+              <pre className="whitespace-pre-wrap text-sm text-neon-cyan/80">{content}</pre>
             </div>
           )}
         </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { WarningCircle, Lightning, Info } from '@phosphor-icons/react';
+
 interface ConfirmModalProps {
   title: string;
   message: string;
@@ -21,17 +23,17 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   const typeStyles = {
     danger: {
-      emoji: '⚠️',
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, var(--neon-pink) 100%)',
+      icon: <WarningCircle size={48} weight="duotone" />,
+      color: 'var(--status-error)',
+      gradient: 'linear-gradient(135deg, var(--status-error) 0%, var(--neon-pink) 100%)',
     },
     warning: {
-      emoji: '⚡',
+      icon: <Lightning size={48} weight="duotone" />,
       color: 'var(--neon-yellow)',
       gradient: 'linear-gradient(135deg, var(--neon-yellow) 0%, var(--neon-pink) 100%)',
     },
     info: {
-      emoji: 'ℹ️',
+      icon: <Info size={48} weight="duotone" />,
       color: 'var(--neon-cyan)',
       gradient: 'linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%)',
     },
@@ -55,7 +57,9 @@ export default function ConfirmModal({
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-6xl mb-4 animate-pulse">{style.emoji}</div>
+          <div className="flex justify-center mb-4 animate-pulse" style={{ color: style.color }}>
+            {style.icon}
+          </div>
           <h2
             className="text-2xl font-bold neon-text mb-3"
             style={{ color: style.color }}
@@ -76,9 +80,9 @@ export default function ConfirmModal({
             onClick={onCancel}
             className="flex-1 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 border-2"
             style={{
-              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderColor: 'rgba(var(--text-muted-rgb), 0.2)',
               color: 'var(--text-secondary)',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'rgba(var(--text-muted-rgb), 0.05)',
             }}
           >
             {cancelText}

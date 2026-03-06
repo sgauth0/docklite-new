@@ -17,13 +17,52 @@ echo ""
 DATABASE_PATH="${DATABASE_PATH:-./data/docklite.db}"
 DOCKLITE_TOKEN="${DOCKLITE_TOKEN:-}"
 AGENT_PORT="${AGENT_PORT:-3000}"
-GUI_PORT="${GUI_PORT:-3001}"
+GUI_PORT="${GUI_PORT:-3002}"
 
-# Check if binaries exist
+# Kill any existing processes on the target ports
+for port in $AGENT_PORT $GUI_PORT; do
+    existing_pid=$(sudo lsof -ti :$port 2>/dev/null || true)
+    if [ -n "$existing_pid" ]; then
+        echo -e "${YELLOW}Killing existing process on port $port (PID: $existing_pid)...${NC}"
+        sudo kill $existing_pid 2>/dev/null || true
+        sleep 1
+    fi
+done
+
+# Also kill tracked PIDs from previous runs
+for pidfile in .docklite-gui.pid .docklite-agent.pid; do
+    if [ -f "$pidfile" ]; then
+        old_pid=$(cat "$pidfile" 2>/dev/null)
+        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+            echo -e "${YELLOW}Killing previous process (PID: $old_pid)...${NC}"
+            kill "$old_pid" 2>/dev/null || true
+        fi
+        rm -f "$pidfile"
+    fi
+done
+sleep 1
+
+# Check if binaries exist, build if missing
 if [ ! -f "./bin/docklite-agent" ]; then
-    echo -e "${RED}Error: docklite-agent binary not found${NC}"
-    echo "Run 'make build-agent' first"
-    exit 1
+    echo -e "${YELLOW}Agent binary not found, building...${NC}"
+    if command -v go >/dev/null 2>&1; then
+        make build-agent
+    else
+        echo -e "${RED}Error: Go not installed${NC}"
+        echo "Please install Go 1.22+ or pre-build the binaries:"
+        echo "  https://go.dev/dl/"
+        exit 1
+    fi
+fi
+
+if [ ! -f "./bin/docklite-tui" ]; then
+    echo -e "${YELLOW}TUI binary not found, building...${NC}"
+    if command -v go >/dev/null 2>&1; then
+        make build-tui
+    else
+        echo -e "${YELLOW}Warning: TUI binary not built (Go not installed)${NC}"
+        echo "The web GUI will still work without the TUI client."
+    fi
 fi
 
 # Check if webapp exists
@@ -57,15 +96,13 @@ mkdir -p ./data
 
 # Check if database exists
 if [ ! -f "$DATABASE_PATH" ]; then
-    echo -e "${YELLOW}Warning: Database not found at $DATABASE_PATH${NC}"
-    echo "You may need to copy from existing installation:"
-    echo "  cp /home/docklite/data/docklite.db ./data/"
+    echo -e "${YELLOW}Database not found at $DATABASE_PATH${NC}"
+    echo -e "${YELLOW}Creating empty database file...${NC}"
+    touch "$DATABASE_PATH"
+    chmod 644 "$DATABASE_PATH"
+    echo -e "${GREEN}✓ Empty database file created${NC}"
+    echo "The GUI will initialize tables on first startup."
     echo ""
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
 fi
 
 # Generate token if not set
@@ -92,6 +129,7 @@ mkdir -p ./logs
 echo -e "${GREEN}Starting Next.js GUI on port $GUI_PORT...${NC}"
 cd webapp
 PORT=$GUI_PORT \
+HOSTNAME="0.0.0.0" \
 DATABASE_PATH="../$DATABASE_PATH" \
 AGENT_URL="http://localhost:$AGENT_PORT" \
 AGENT_TOKEN="$DOCKLITE_TOKEN" \
@@ -101,14 +139,7 @@ GUI_PID=$!
 cd ..
 
 echo -e "${GREEN}✓ GUI started (PID: $GUI_PID)${NC}"
-sleep 3
-
-# Check if GUI is running
-if ! kill -0 $GUI_PID 2>/dev/null; then
-    echo -e "${RED}✗ GUI failed to start${NC}"
-    echo "Check logs/nextjs.log for errors"
-    exit 1
-fi
+echo -e "${BLUE}Waiting for GUI to initialize database...${NC}"
 
 # Start Agent
 echo -e "${GREEN}Starting Agent on port $AGENT_PORT...${NC}"
@@ -157,6 +188,9 @@ echo -e "${BLUE}Access:${NC}"
 echo "  🌐 Web GUI:   http://localhost:$AGENT_PORT"
 echo "  🔧 Agent API: http://localhost:$AGENT_PORT/api/*"
 echo "  💻 TUI:       DOCKLITE_URL=http://localhost:$AGENT_PORT DOCKLITE_TOKEN=$DOCKLITE_TOKEN ./bin/docklite-tui"
+echo ""
+echo -e "${YELLOW}For remote access, use your server's IP:${NC}"
+echo "  🌐 Web GUI:   http://YOUR_SERVER_IP:$AGENT_PORT"
 echo ""
 echo -e "${BLUE}Processes:${NC}"
 echo "  GUI PID:   $GUI_PID (port $GUI_PORT)"

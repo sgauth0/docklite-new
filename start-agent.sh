@@ -36,16 +36,13 @@ mkdir -p ./data
 
 # Check if database exists
 if [ ! -f "$DATABASE_PATH" ]; then
-    echo -e "${YELLOW}Warning: Database not found at $DATABASE_PATH${NC}"
-    echo "You may need to:"
-    echo "  1. Copy from existing installation: cp /home/docklite/data/docklite.db ./data/"
-    echo "  2. Or initialize a new database (requires Next.js migrations)"
+    echo -e "${YELLOW}Database not found at $DATABASE_PATH${NC}"
+    echo -e "${YELLOW}Creating empty database file...${NC}"
+    touch "$DATABASE_PATH"
+    chmod 644 "$DATABASE_PATH"
+    echo -e "${GREEN}✓ Empty database file created${NC}"
+    echo "Note: Run with Next.js GUI first to initialize tables via migrations."
     echo ""
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
 fi
 
 # Generate token if not set

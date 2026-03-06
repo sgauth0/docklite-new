@@ -1,100 +1,75 @@
-
 # DockLite Gemini Agent Context
 
 This document provides context for the Gemini agent to understand the DockLite project.
 
 ## Project Overview
 
-DockLite is a minimal Docker management system with three modes of operation:
+DockLite is a comprehensive Docker management system designed for flexibility and ease of use. It operates in three distinct modes:
 
-1.  **Headless:** Agent only (no GUI)
-2.  **TUI:** Terminal UI client
-3.  **Full Stack:** Web GUI + Agent + TUI
+1.  **Full Stack:** Web GUI + Agent + TUI (Best for production, team access).
+2.  **Headless:** Agent only (API) (Best for remote servers, automation).
+3.  **TUI:** Terminal UI client (Best for terminal enthusiasts, SSH access).
 
-The project is composed of three main components:
+## Directory Structure & Components
 
-*   **Go Agent (`docklite-agent`):** A Go-based API server that interacts with the Docker API and manages a SQLite database for metadata.
-*   **Next.js Web GUI:** A web-based dashboard for managing Docker containers, databases, files, and more.
-*   **Go TUI (`docklite-tui`):** A terminal-based UI for interacting with the agent.
+The project is organized into three main component directories:
 
-## Architecture
+*   **`go-app/` (Backend Agent):**
+    *   **Description:** A Go-based API server that bridges the UI and the Docker daemon.
+    *   **Tech Stack:** Go, SQLite (metadata), Docker SDK.
+    *   **Key Path:** `go-app/cmd/docklite-agent/main.go`
+*   **`webapp/` (Frontend GUI):**
+    *   **Description:** A full-featured web dashboard.
+    *   **Tech Stack:** Next.js (App Router), TypeScript, Tailwind CSS, `iron-session` (auth).
+    *   **Key Path:** `webapp/app/`
+*   **`cli-repo/` (TUI Client):**
+    *   **Description:** A terminal-based user interface.
+    *   **Tech Stack:** Go, Bubble Tea.
+    *   **Key Path:** `cli-repo/main.go`
 
-The core of the project is the `docklite-agent`, which serves as a bridge between the UIs (web and TUI) and the Docker daemon. It exposes a RESTful API for managing Docker resources.
+## Key Features
 
-### Full Stack Mode
+*   **Container Management:** Start, stop, restart, logs, stats, exec.
+*   **Database Provisioning:** Create and manage PostgreSQL, MySQL, MongoDB containers.
+*   **File Management:** Browse, upload, download, and edit files in volumes/containers.
+*   **Backup System:** Schedule and execute backups to local storage, S3, or SFTP.
+*   **DNS Management:** Manage Cloudflare DNS records directly from the UI.
+*   **SSL Monitoring:** Track SSL certificate status.
+*   **User Management:** Role-based access control (Super Admin, Admin, User).
+*   **Web Terminal:** Interactive terminal access to containers via the web UI.
 
-*   The Next.js GUI runs on port 3001.
-*   The agent runs on port 3000 and proxies requests to the Next.js GUI.
-*   The TUI connects to the agent on port 3000.
+## Architecture & Data Flow
 
-### Headless Mode
+*   **Agent (Port 3000):** Acts as the central hub. It handles API requests (`/api/*`), manages the SQLite database, interacts with the Docker daemon, and proxies non-API requests to the Next.js GUI.
+*   **GUI (Port 3001):** The Next.js application runs internally. The user accesses it via the Agent's proxy on port 3000.
+*   **TUI:** Connects directly to the Agent's API, authenticated via a bearer token.
 
-*   The agent runs on port 3000.
-*   The TUI connects to the agent on port 3000.
-*   The Next.js GUI is disabled.
+## Key Files & Documentation
 
-## Key Files
+### Documentation
+*   `README.md`: Quick start and overview.
+*   `COMPLETE_STACK.md`: Detailed stack architecture and "Three Modes" explanation.
+*   `DEPLOYMENT.md`: Production deployment guide.
+*   `DATABASESPEC.md`: Database schema specifications.
+*   `WIRING_COMPLETE.md`: Wiring diagrams and connection details.
 
-*   `README.md`: Project overview and quick start guide.
-*   `Makefile`: Build and run scripts.
-*   `start-fullstack.sh`: Script to start the full stack (agent + GUI).
-*   `go-app/cmd/docklite-agent/main.go`: Entry point for the Go agent.
-*   `webapp/package.json`: Dependencies and scripts for the Next.js GUI.
-*   `cli-repo/main.go`: Entry point for the TUI.
-*   `go-app/internal/api/router.go`: API routes handled by the agent.
-*   `DEPLOYMENT.md`: Detailed deployment guide.
+### Configuration & Scripts
+*   `Makefile`: Main build control (`build-all`, `build-agent`, `build-gui`, `build-tui`).
+*   `start-fullstack.sh`: **Primary startup script** for the complete experience.
+*   `start-agent.sh`: Starts only the headless agent.
+*   `start-tui.sh`: Starts the terminal client.
+*   `stop-all.sh`: Stops all running services.
+*   `.env`: Configuration for ports, tokens, and secrets (see `webapp/.env.example`).
 
-## Building and Running
-
-### Building
-
-The project can be built using the `Makefile`:
-
-```bash
-# Build everything (agent, TUI, and GUI)
-make build-all
-
-# Build the agent only
-make build-agent
-
-# Build the TUI only
-make build-tui
-
-# Build the Next.js GUI
-make build-gui
-```
-
-### Running
-
-#### Full Stack
-
-To run the full stack (agent + GUI), use the `start-fullstack.sh` script:
-
-```bash
-./start-fullstack.sh
-```
-
-This will start the agent on port 3000 and the GUI on port 3001. The application will be accessible at `http://localhost:3000`.
-
-#### Development Mode
-
-The `Makefile` provides targets for running the components in development mode:
-
-```bash
-# Run the agent in development mode
-make run-agent
-
-# Run the TUI in development mode
-make run-tui
-
-# Run the GUI in development mode
-make run-gui
-```
+### Source Code Highlights
+*   **Agent Routes:** `go-app/internal/api/router.go`
+*   **Agent Handlers:** `go-app/internal/handlers/` (Business logic for all features).
+*   **Frontend Pages:** `webapp/app/(dashboard)/` (Main UI views).
+*   **Database Init:** `webapp/lib/migrations/` (Schema migrations).
 
 ## Development Conventions
 
-*   **Backend:** The backend is written in Go. Dependencies are managed with Go modules.
-*   **Frontend:** The frontend is a Next.js application written in TypeScript. Dependencies are managed with npm.
-*   **API:** The agent exposes a RESTful API for managing Docker resources. Authentication is done via a bearer token.
-*   **Database:** The agent uses a SQLite database to store metadata.
-*   **Styling:** The frontend uses Tailwind CSS for styling.
+*   **Language:** Go (Backend/TUI), TypeScript (Frontend).
+*   **Style:** Follow existing Go patterns (handlers, stores) and React/Next.js patterns (hooks, components).
+*   **Auth:** Bearer token for API/TUI; Session-based (via API proxy) for Web GUI.
+*   **Database:** SQLite is the single source of truth for metadata.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Lightning, WarningCircle } from '@phosphor-icons/react';
 
 interface User {
   id: number;
@@ -169,7 +169,9 @@ export default function ManageUsersPage() {
   if (loading) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4 animate-float">⚡</div>
+        <div className="flex justify-center mb-4 animate-float">
+          <Lightning size={48} weight="duotone" color="var(--neon-cyan)" />
+        </div>
         <div className="text-2xl font-bold neon-text animate-pulse" style={{ color: 'var(--neon-cyan)' }}>
           Loading users...
         </div>
@@ -180,8 +182,10 @@ export default function ManageUsersPage() {
   if (error) {
     return (
       <div className="text-center py-16">
-        <div className="text-6xl mb-4">⚠️</div>
-        <div className="text-xl font-bold mb-4" style={{ color: '#ff6b6b' }}>
+        <div className="flex justify-center mb-4">
+          <WarningCircle size={48} weight="duotone" color="var(--status-error)" />
+        </div>
+        <div className="text-xl font-bold mb-4" style={{ color: 'var(--status-error)' }}>
           {error}
         </div>
       </div>
@@ -189,13 +193,10 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <Link href="/settings" className="cyber-button inline-flex items-center gap-2">
-            ← Back to Settings
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold neon-text-pink">Manage Users</h1>
+          <h2 className="text-2xl font-bold neon-text-pink">Manage Users</h2>
           <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
             ▸ Manage system users and permissions ◂
           </p>
@@ -242,7 +243,7 @@ export default function ManageUsersPage() {
                       {user.role === 'super_admin' ? 'Superadmin' : 'Admin'}
                     </span>
                   ) : (
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-dark-bg/60 text-gray-300">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-dark-bg/60 text-neon-cyan">
                       User
                     </span>
                   )}
@@ -281,7 +282,7 @@ export default function ManageUsersPage() {
                               setDeleteUserTarget(user);
                               setMenuUserId(null);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                            className="w-full text-left px-4 py-2 text-sm text-status-error hover:bg-status-error/10"
                           >
                             Delete
                           </button>
@@ -316,9 +317,9 @@ export default function ManageUsersPage() {
           <div
             className="card-vapor max-w-lg w-full p-6 relative"
             style={{
-              background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.95) 0%, rgba(10, 5, 30, 0.9) 100%)',
-              border: '1px solid rgba(255, 16, 240, 0.3)',
-              boxShadow: '0 0 30px rgba(181, 55, 242, 0.4)',
+              background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
+              border: '1px solid rgba(var(--neon-pink-rgb), 0.3)',
+              boxShadow: '0 0 30px rgba(var(--neon-purple-rgb), 0.4)',
             }}
           >
             <div className="flex items-center justify-between mb-6">
@@ -374,13 +375,13 @@ export default function ManageUsersPage() {
           <div
             className="card-vapor max-w-md w-full p-6 relative"
             style={{
-              background: 'linear-gradient(135deg, rgba(46, 10, 26, 0.98) 0%, rgba(30, 5, 10, 0.98) 100%)',
-              border: '2px solid #ff6b6b',
-              boxShadow: '0 0 30px rgba(255, 107, 107, 0.5)',
+              background: 'linear-gradient(135deg, rgba(var(--status-error-rgb), 0.25) 0%, rgba(var(--status-error-rgb), 0.45) 100%)',
+              border: '2px solid var(--status-error)',
+              boxShadow: '0 0 30px rgba(var(--status-error-rgb), 0.5)',
             }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold" style={{ color: '#ff6b6b' }}>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--status-error)' }}>
                 Delete User
               </h2>
               <button
@@ -409,15 +410,15 @@ export default function ManageUsersPage() {
               <div
                 className="mb-4 px-3 py-2 rounded-lg text-sm"
                 style={{
-                  background: 'rgba(255, 107, 107, 0.15)',
-                  border: '1px solid rgba(255, 107, 107, 0.5)',
-                  color: '#ff6b6b',
+                  background: 'rgba(var(--status-error-rgb), 0.15)',
+                  border: '1px solid rgba(var(--status-error-rgb), 0.5)',
+                  color: 'var(--status-error)',
                 }}
               >
                 {deleteError}
               </div>
             )}
-            <div className="mb-6 p-3 rounded-lg text-sm" style={{ background: 'rgba(255, 107, 107, 0.1)', color: '#ff6b6b' }}>
+            <div className="mb-6 p-3 rounded-lg text-sm" style={{ background: 'rgba(var(--status-error-rgb), 0.1)', color: 'var(--status-error)' }}>
               {deleteUserTarget.username}
             </div>
             <div className="flex justify-end gap-3">
@@ -446,9 +447,9 @@ export default function ManageUsersPage() {
           <div
             className="card-vapor max-w-md w-full p-6 relative"
             style={{
-              background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.95) 0%, rgba(10, 5, 30, 0.9) 100%)',
-              border: '1px solid rgba(0, 255, 255, 0.3)',
-              boxShadow: '0 0 30px rgba(0, 255, 255, 0.25)',
+              background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
+              border: '1px solid rgba(var(--neon-cyan-rgb), 0.3)',
+              boxShadow: '0 0 30px rgba(var(--neon-cyan-rgb), 0.25)',
             }}
           >
             <div className="flex items-center justify-between mb-4">
@@ -468,9 +469,9 @@ export default function ManageUsersPage() {
               <div
                 className="mb-4 px-3 py-2 rounded-lg text-sm"
                 style={{
-                  background: 'rgba(255, 107, 107, 0.15)',
-                  border: '1px solid rgba(255, 107, 107, 0.5)',
-                  color: '#ff6b6b',
+                  background: 'rgba(var(--status-error-rgb), 0.15)',
+                  border: '1px solid rgba(var(--status-error-rgb), 0.5)',
+                  color: 'var(--status-error)',
                 }}
               >
                 {passwordError}
@@ -517,9 +518,9 @@ export default function ManageUsersPage() {
           <div
             className="card-vapor max-w-xl w-full p-6 relative"
             style={{
-              background: 'linear-gradient(135deg, rgba(26, 10, 46, 0.95) 0%, rgba(10, 5, 30, 0.9) 100%)',
-              border: '1px solid rgba(255, 16, 240, 0.3)',
-              boxShadow: '0 0 30px rgba(181, 55, 242, 0.4)',
+              background: 'linear-gradient(135deg, var(--modal-bg-1) 0%, var(--modal-bg-2) 100%)',
+              border: '1px solid rgba(var(--neon-pink-rgb), 0.3)',
+              boxShadow: '0 0 30px rgba(var(--neon-purple-rgb), 0.4)',
             }}
           >
             <div className="flex items-center justify-between mb-6">
@@ -543,9 +544,9 @@ export default function ManageUsersPage() {
                 <div
                   className="px-4 py-3 rounded-lg text-sm"
                   style={{
-                    background: 'rgba(255, 107, 107, 0.15)',
-                    border: '1px solid rgba(255, 107, 107, 0.5)',
-                    color: '#ff6b6b',
+                    background: 'rgba(var(--status-error-rgb), 0.15)',
+                    border: '1px solid rgba(var(--status-error-rgb), 0.5)',
+                    color: 'var(--status-error)',
                   }}
                 >
                   {createError}

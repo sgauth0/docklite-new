@@ -14,6 +14,31 @@ The system operates in three modes:
 - **TUI**: Terminal UI client connecting to agent
 - **Full Stack**: Complete web interface + agent + TUI
 
+## Technology Stack
+
+**Backend (Go):**
+- Go 1.22.0
+- Docker SDK (`github.com/docker/docker`) - Native Docker API integration
+- SQLite (`modernc.org/sqlite`) - Pure Go embedded database
+- Gorilla WebSocket (`github.com/gorilla/websocket`) - Real-time communication
+- Go Crypto (`golang.org/x/crypto`) - Password hashing
+
+**Frontend (Next.js):**
+- Next.js 14.2 (App Router)
+- React 18.3
+- TypeScript
+- TailwindCSS - Utility-first CSS
+- better-sqlite3 - SQLite driver for Node.js
+- Dockerode - Docker API client
+- iron-session - Encrypted session management
+- xterm.js - Terminal emulation
+- dnd-kit - Drag-and-drop library
+- Phosphor Icons
+
+**TUI Client (Go):**
+- Bubble Tea (`github.com/charmbracelet/bubbletea`) - Terminal UI framework
+- Config storage: `~/.config/docklite/config.json`
+
 ## Build Commands
 
 ```bash
@@ -104,19 +129,24 @@ Browser/TUI → Agent (port 3000) → Docker Daemon
 ## Directory Structure
 
 ```
-/home/docklite-new/
+/home/docklite-new-new/
 ├── bin/
-│   ├── docklite-agent     # Go agent binary
-│   └── docklite-tui       # TUI binary
-├── go-app/                # Agent source code
+│   ├── docklite-agent     # Go agent binary (17MB)
+│   └── docklite-tui       # TUI binary (8.5MB)
+├── go-app/                # Agent source code (Go 1.22)
 │   ├── cmd/
 │   │   └── docklite-agent/main.go   # Agent entry point
 │   └── internal/
 │       ├── api/           # HTTP routing and proxy
-│       ├── handlers/      # Request handlers for all endpoints
+│       ├── handlers/      # Request handlers (27+ files for all endpoints)
 │       ├── docker/        # Docker client wrapper
-│       ├── store/         # SQLite operations
-│       ├── backup/        # Backup scheduler
+│       │   ├── client.go
+│       │   ├── containers.go
+│       │   ├── databases.go
+│       │   └── exec.go    # Container exec operations
+│       ├── store/         # SQLite operations (all table CRUD)
+│       ├── backup/        # Backup scheduler and execution
+│       ├── cloudflare/    # DNS integration (Cloudflare API)
 │       ├── config/        # Config loading
 │       └── models/        # Data structures
 ├── cli-repo/              # TUI source code
@@ -156,12 +186,15 @@ Browser/TUI → Agent (port 3000) → Docker Daemon
 ### Agent Handlers
 All in `go-app/internal/handlers/`:
 - `containers.go` - Container operations (list, start, stop, restart, logs, stats)
+- `terminal.go` - WebSocket terminal connections for container exec
 - `databases.go` + `databases_extra.go` - Database provisioning and management
 - `files.go` + `files_extra.go` - File browser and editor
 - `folders.go` - Container organization (drag-and-drop groups)
 - `backups.go` - Backup operations
 - `dns.go` - DNS record operations
 - `ssl.go` - SSL certificate status
+- `network.go` - Network overview and firewall management
+- `server_overview.go` - System statistics and diagnostics
 - `auth.go` + `tokens.go` - Authentication middleware
 
 ### Next.js Core Libraries
@@ -362,6 +395,50 @@ Prefer agent for Docker operations when possible (better performance, no Node.js
 - Use `./start-agent.sh` with `NEXTJS_URL=disabled`
 - TUI-only access
 - Minimal resource usage
+
+## Quick Reference for Common Tasks
+
+### Where to look when...
+
+**Adding a new container feature:**
+1. Agent handler: `go-app/internal/handlers/containers.go`
+2. Agent route: `go-app/internal/api/router.go`
+3. GUI page: `webapp/app/(dashboard)/page.tsx` or `containers/[id]/page.tsx`
+4. GUI client: `webapp/lib/agent-client.ts`
+
+**Adding a database feature:**
+1. Agent: `go-app/internal/handlers/databases.go`
+2. GUI: `webapp/app/(dashboard)/databases/page.tsx`
+3. Database operations: `webapp/lib/db.ts`
+
+**Adding authentication/user management:**
+1. Session logic: `webapp/lib/auth.ts`
+2. Login page: `webapp/app/(auth)/login/page.tsx`
+3. User API: `webapp/app/api/users/route.ts`
+4. User DB: `webapp/lib/db.ts` (getUsers, createUser, etc.)
+
+**Adding backup functionality:**
+1. Agent scheduler: `go-app/internal/backup/scheduler.go`
+2. Agent handler: `go-app/internal/handlers/backups.go`
+3. GUI page: `webapp/app/(dashboard)/backups/page.tsx`
+4. GUI API: `webapp/app/api/backups/`
+
+**Modifying Docker operations:**
+1. Docker wrapper: `go-app/internal/docker/client.go`
+2. Container ops: `go-app/internal/docker/containers.go`
+3. Alternative (GUI): `webapp/lib/docker.ts` (using Dockerode)
+
+**Working with the database:**
+- Schema migrations: `webapp/lib/migrations/` (auto-run on startup)
+- Go operations: `go-app/internal/store/*.go`
+- Node.js operations: `webapp/lib/db.ts`
+- Database location: `data/docklite.db` (shared between agent and GUI)
+
+**Styling and UI components:**
+- Global styles: `webapp/globals.css`
+- Tailwind config: `webapp/tailwind.config.ts`
+- Dashboard components: `webapp/app/(dashboard)/components/`
+- Layout: `webapp/app/(dashboard)/layout.tsx`
 
 ## Security Notes
 

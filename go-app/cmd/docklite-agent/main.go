@@ -32,14 +32,19 @@ func main() {
 	}
 	defer sqliteStore.Close()
 
+	// Initialize tables needed by the agent
+	if err := sqliteStore.InitializeAgentTables(); err != nil {
+		log.Fatalf("failed to initialize agent tables: %v", err)
+	}
+
 	if err := handlers.EnsureBootstrapToken(sqliteStore, cfg.Token); err != nil {
 		log.Fatalf("failed to ensure bootstrap token: %v", err)
 	}
 
-	handlers := handlers.New(dockerClient, sqliteStore, cfg.Token)
+	handlers := handlers.New(dockerClient, sqliteStore, cfg.Token, cfg.BackupBaseDir)
 	router := api.NewRouter(handlers, cfg.NextjsURL)
 
-	backup.StartScheduler(sqliteStore, dockerClient)
+	backup.StartScheduler(sqliteStore, dockerClient, cfg.BackupBaseDir)
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,

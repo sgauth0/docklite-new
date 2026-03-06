@@ -84,7 +84,7 @@ func (h *Handlers) MoveFolder(w http.ResponseWriter, r *http.Request, folderID i
 	}
 
 	var req moveFolderRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -165,7 +165,7 @@ func (h *Handlers) ReorderFolderContainers(w http.ResponseWriter, r *http.Reques
 		ContainerID string `json:"containerId"`
 		NewPosition int    `json:"newPosition"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -206,7 +206,7 @@ func (h *Handlers) AssignContainer(w http.ResponseWriter, r *http.Request, conta
 		return
 	}
 	var req assignContainerRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -320,7 +320,7 @@ func (h *Handlers) listFolders(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) createFolder(w http.ResponseWriter, r *http.Request) {
 	var req createFolderRequest
-	if err := readJSON(r, &req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -430,7 +430,7 @@ func (h *Handlers) addContainerToFolder(w http.ResponseWriter, r *http.Request, 
 	var body struct {
 		ContainerID string `json:"containerId"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -243,6 +243,10 @@ func (s *SQLiteStore) GetBackups(limit int) ([]BackupRecord, error) {
 	return s.getBackupsByQuery(`SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at FROM backups ORDER BY created_at DESC LIMIT ?`, limit)
 }
 
+func (s *SQLiteStore) ListBackups() ([]BackupRecord, error) {
+	return s.getBackupsByQuery(`SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at FROM backups ORDER BY created_at DESC`)
+}
+
 func (s *SQLiteStore) GetBackupsByJob(jobID int64, limit int) ([]BackupRecord, error) {
 	if limit <= 0 {
 		limit = 50
@@ -255,6 +259,41 @@ func (s *SQLiteStore) GetBackupsByTarget(targetType string, targetID int64, limi
 		limit = 50
 	}
 	return s.getBackupsByQuery(`SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at FROM backups WHERE target_type = ? AND target_id = ? ORDER BY created_at DESC LIMIT ?`, targetType, targetID, limit)
+}
+
+func (s *SQLiteStore) GetBackupByID(id int64) (*BackupRecord, error) {
+	records, err := s.getBackupsByQuery(`SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at FROM backups WHERE id = ?`, id)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+	return &records[0], nil
+}
+
+func (s *SQLiteStore) ListOldBackups(destinationID int64, cutoff string) ([]BackupRecord, error) {
+	return s.getBackupsByQuery(`
+    SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at
+    FROM backups
+    WHERE destination_id = ? AND created_at < ? AND status = 'success'
+  `, destinationID, cutoff)
+}
+
+func (s *SQLiteStore) GetBackupByPath(backupPath string) (*BackupRecord, error) {
+	records, err := s.getBackupsByQuery(`
+    SELECT id, job_id, destination_id, target_type, target_id, backup_path, size_bytes, status, error_message, created_at
+    FROM backups
+    WHERE backup_path = ?
+    LIMIT 1
+  `, backupPath)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+	return &records[0], nil
 }
 
 func (s *SQLiteStore) DeleteBackup(id int64) error {

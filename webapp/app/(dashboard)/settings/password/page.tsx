@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -55,17 +54,12 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Link href="/settings" className="cyber-button inline-flex items-center gap-2">
-            ← Back to Settings
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold neon-text-pink">Change Password</h1>
-          <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
-            ▸ Update your account credentials ◂
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold neon-text-pink">Change Password</h2>
+        <p className="text-xs font-mono mt-2" style={{ color: 'var(--text-secondary)' }}>
+          ▸ Update your account credentials ◂
+        </p>
       </div>
 
       <div className="cyber-card p-6">
@@ -74,9 +68,9 @@ export default function ChangePasswordPage() {
             <div
               className="px-4 py-3 rounded-lg text-sm"
               style={{
-                background: 'rgba(255, 107, 107, 0.15)',
-                border: '1px solid rgba(255, 107, 107, 0.5)',
-                color: '#ff6b6b',
+                background: 'rgba(var(--status-error-rgb), 0.15)',
+                border: '1px solid rgba(var(--status-error-rgb), 0.5)',
+                color: 'var(--status-error)',
               }}
             >
               {error}
@@ -87,8 +81,8 @@ export default function ChangePasswordPage() {
             <div
               className="px-4 py-3 rounded-lg text-sm"
               style={{
-                background: 'rgba(57, 255, 20, 0.15)',
-                border: '1px solid rgba(57, 255, 20, 0.5)',
+                background: 'rgba(var(--status-success-rgb), 0.15)',
+                border: '1px solid rgba(var(--status-success-rgb), 0.5)',
                 color: 'var(--neon-green)',
               }}
             >
@@ -141,12 +135,6 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Link
-              href="/"
-              className="cyber-button-sm"
-            >
-              Cancel
-            </Link>
             <button
               type="submit"
               disabled={loading}

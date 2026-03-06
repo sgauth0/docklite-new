@@ -71,18 +71,17 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="card-vapor max-w-2xl w-full p-6 rounded-2xl border-2 border-purple-500/40">
+      <div className="card-vapor max-w-2xl w-full p-6 rounded-2xl border-2 border-neon-purple/40">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-purple-200/70">Create Container</div>
-            <div className="text-2xl font-bold text-cyan-200">New Site</div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-neon-purple/70">Create Container</div>            <div className="text-2xl font-bold text-neon-cyan">New Site</div>
           </div>
           <button onClick={onClose} className="btn-neon px-3 py-1 text-sm font-bold">✕ Close</button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-bold text-cyan-100 block mb-2">Domain</label>
+            <label className="text-sm font-bold text-neon-cyan/80 block mb-2">Domain</label>
             <input
               className="input-vapor w-full px-3 py-2 font-mono"
               placeholder="example.com"
@@ -93,7 +92,7 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-bold text-cyan-100 block mb-2">Template</label>
+              <label className="text-sm font-bold text-neon-cyan/80 block mb-2">Template</label>
               <select
                 className="input-vapor w-full px-3 py-2"
                 value={templateType}
@@ -105,7 +104,7 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
               </select>
             </div>
             <div>
-              <label className="text-sm font-bold text-cyan-100 block mb-2">Code Path (optional)</label>
+              <label className="text-sm font-bold text-neon-cyan/80 block mb-2">Code Path (optional)</label>
               <input
                 className="input-vapor w-full px-3 py-2 font-mono"
                 placeholder="/var/www/sites/username/example.com"
@@ -117,7 +116,7 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
 
           {templateType === 'node' && (
             <div>
-              <label className="text-sm font-bold text-cyan-100 block mb-2">Node Internal Port</label>
+              <label className="text-sm font-bold text-neon-cyan/80 block mb-2">Node Internal Port</label>
               <input
                 type="number"
                 className="input-vapor w-full px-3 py-2 font-mono"
@@ -139,8 +138,7 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
               checked={includeWww}
               onChange={(e) => setIncludeWww(e.target.checked)}
             />
-            <label htmlFor="include-www" className="text-sm text-purple-100">
-              Request SSL for <code>www.{domain || 'example.com'}</code> too
+                              <label htmlFor="include-www" className="text-sm text-neon-purple">              Request SSL for <code>www.{domain || 'example.com'}</code> too
             </label>
           </div>
 

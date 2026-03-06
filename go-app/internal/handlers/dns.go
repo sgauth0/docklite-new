@@ -37,7 +37,7 @@ func (h *Handlers) DNSConfig(w http.ResponseWriter, r *http.Request) {
 			AccountID string `json:"account_id"`
 			Enabled   *bool  `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -88,7 +88,7 @@ func (h *Handlers) DNSZones(w http.ResponseWriter, r *http.Request) {
 			AccountID  string `json:"account_id"`
 			AutoImport bool   `json:"auto_import"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -111,7 +111,7 @@ func (h *Handlers) DNSZones(w http.ResponseWriter, r *http.Request) {
 			AccountID *string `json:"account_id"`
 			Enabled   *int    `json:"enabled"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -187,7 +187,7 @@ func (h *Handlers) DNSRecords(w http.ResponseWriter, r *http.Request) {
 			Priority *int   `json:"priority"`
 			Proxied  *int   `json:"proxied"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -251,7 +251,7 @@ func (h *Handlers) DNSRecords(w http.ResponseWriter, r *http.Request) {
 			Priority *int    `json:"priority"`
 			Proxied  *int    `json:"proxied"`
 		}
-		if err := readJSON(r, &body); err != nil {
+		if err := readJSON(w, r, &body); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -312,7 +312,7 @@ func (h *Handlers) DNSSync(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ZoneID *int64 `json:"zone_id"`
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -1,14 +1,15 @@
 [Unit]
 Description=DockLite Agent
-After=network.target
+After=network.target docker.service
+Requires=docker.service
 
 [Service]
 Type=simple
 User=docklite
 Group=docklite
-WorkingDirectory=__INSTALL_DIR__/go-app
+WorkingDirectory=__INSTALL_DIR__
 EnvironmentFile=/etc/docklite/docklite-agent.env
-ExecStart=__INSTALL_DIR__/go-app/docklite-agent
+ExecStart=__INSTALL_DIR__/bin/docklite-agent
 Restart=on-failure
 RestartSec=3
 
