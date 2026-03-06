@@ -144,15 +144,15 @@ if [[ "${INSTALL_MODE}" != "headless" ]]; then
 fi
 
 echo "Building agent..."
-$SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}/go-app' && PATH=/usr/local/go/bin:/usr/bin:/bin go build -o docklite-agent ./cmd/docklite-agent"
+$SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && mkdir -p bin && cd go-app && PATH=/usr/local/go/bin:/usr/bin:/bin go build -o ../bin/docklite-agent ./cmd/docklite-agent"
 
 echo "Installing systemd services..."
-$SUDO sed "s|__INSTALL_DIR__|${INSTALL_DIR}|g" "${INSTALL_DIR}/scripts/systemd/docklite-agent.service" | \
+$SUDO sed "s|__INSTALL_DIR__|${INSTALL_DIR}|g" "${INSTALL_DIR}/webapp/scripts/systemd/docklite-agent.service" | \
   $SUDO tee /etc/systemd/system/docklite-agent.service >/dev/null
 
 $SUDO systemctl daemon-reload
 if [[ "${INSTALL_MODE}" != "headless" ]]; then
-  $SUDO sed "s|__INSTALL_DIR__|${INSTALL_DIR}|g" "${INSTALL_DIR}/scripts/systemd/docklite-web.service" | \
+  $SUDO sed "s|__INSTALL_DIR__|${INSTALL_DIR}|g" "${INSTALL_DIR}/webapp/scripts/systemd/docklite-web.service" | \
     $SUDO tee /etc/systemd/system/docklite-web.service >/dev/null
   $SUDO systemctl daemon-reload
   $SUDO systemctl enable --now docklite-web.service docklite-agent.service

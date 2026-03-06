@@ -17,7 +17,7 @@ echo ""
 DATABASE_PATH="${DATABASE_PATH:-./data/docklite.db}"
 DOCKLITE_TOKEN="${DOCKLITE_TOKEN:-}"
 AGENT_PORT="${AGENT_PORT:-3000}"
-GUI_PORT="${GUI_PORT:-3001}"
+GUI_PORT="${GUI_PORT:-3002}"
 
 # Kill any existing processes on the target ports
 for port in $AGENT_PORT $GUI_PORT; do
@@ -42,11 +42,27 @@ for pidfile in .docklite-gui.pid .docklite-agent.pid; do
 done
 sleep 1
 
-# Check if binaries exist
+# Check if binaries exist, build if missing
 if [ ! -f "./bin/docklite-agent" ]; then
-    echo -e "${RED}Error: docklite-agent binary not found${NC}"
-    echo "Run 'make build-agent' first"
-    exit 1
+    echo -e "${YELLOW}Agent binary not found, building...${NC}"
+    if command -v go >/dev/null 2>&1; then
+        make build-agent
+    else
+        echo -e "${RED}Error: Go not installed${NC}"
+        echo "Please install Go 1.22+ or pre-build the binaries:"
+        echo "  https://go.dev/dl/"
+        exit 1
+    fi
+fi
+
+if [ ! -f "./bin/docklite-tui" ]; then
+    echo -e "${YELLOW}TUI binary not found, building...${NC}"
+    if command -v go >/dev/null 2>&1; then
+        make build-tui
+    else
+        echo -e "${YELLOW}Warning: TUI binary not built (Go not installed)${NC}"
+        echo "The web GUI will still work without the TUI client."
+    fi
 fi
 
 # Check if webapp exists
@@ -171,6 +187,9 @@ echo -e "${BLUE}Access:${NC}"
 echo "  🌐 Web GUI:   http://localhost:$AGENT_PORT"
 echo "  🔧 Agent API: http://localhost:$AGENT_PORT/api/*"
 echo "  💻 TUI:       DOCKLITE_URL=http://localhost:$AGENT_PORT DOCKLITE_TOKEN=$DOCKLITE_TOKEN ./bin/docklite-tui"
+echo ""
+echo -e "${YELLOW}For remote access, use your server's IP:${NC}"
+echo "  🌐 Web GUI:   http://YOUR_SERVER_IP:$AGENT_PORT"
 echo ""
 echo -e "${BLUE}Processes:${NC}"
 echo "  GUI PID:   $GUI_PID (port $GUI_PORT)"
