@@ -32,6 +32,7 @@ $SUDO apt-get install -y \
   git \
   rsync \
   openssl \
+  unzip \
   build-essential \
   pkg-config \
   libsqlite3-dev
@@ -42,10 +43,31 @@ install_node() {
     current_major="$(node -p "process.versions.node.split('.')[0]")"
   fi
   if [[ "${current_major}" -lt "${NODE_MAJOR}" ]]; then
-    echo "Installing Node.js ${NODE_MAJOR}.x..."
+    echo "Installing Node.js ${NODE_MAJOR}.x (required for native addon compilation)..."
     curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO bash -
     $SUDO apt-get install -y nodejs
   fi
+}
+
+install_bun() {
+  if command -v bun >/dev/null 2>&1; then
+    echo "bun already installed: $(bun --version)"
+    return
+  fi
+  echo "Installing bun..."
+  local arch
+  arch="$(uname -m)"
+  case "${arch}" in
+    x86_64) arch="x64" ;;
+    aarch64) arch="aarch64" ;;
+    *) echo "Unsupported arch for bun: ${arch}" >&2; exit 1 ;;
+  esac
+  local url="https://github.com/oven-sh/bun/releases/latest/download/bun-linux-${arch}.zip"
+  curl -fsSL "$url" -o /tmp/bun.zip
+  unzip -o /tmp/bun.zip -d /tmp/bun-install >/dev/null
+  $SUDO install -m 0755 /tmp/bun-install/bun-linux-${arch}/bun /usr/local/bin/bun
+  rm -rf /tmp/bun.zip /tmp/bun-install
+  echo "bun installed: $(bun --version)"
 }
 
 install_go() {
@@ -78,6 +100,7 @@ install_go() {
 
 install_node
 install_go
+install_bun
 
 if ! id -u "${DOCKLITE_USER}" >/dev/null 2>&1; then
   echo "Creating system user ${DOCKLITE_USER}..."
@@ -101,6 +124,13 @@ fi
 
 $SUDO mkdir -p "${INSTALL_DIR}/data" /etc/docklite
 $SUDO chown -R "${DOCKLITE_USER}:${DOCKLITE_GROUP}" "${INSTALL_DIR}" /etc/docklite
+
+# Create the sites root and make the docklite user the sole owner.
+# All OS-level permissions flow through this user; DockLite enforces
+# per-user access within its own application layer.
+$SUDO mkdir -p /var/www/sites
+$SUDO chown "${DOCKLITE_USER}:${DOCKLITE_GROUP}" /var/www/sites
+$SUDO chmod 755 /var/www/sites
 
 TOKEN_FILE="/etc/docklite/docklite-agent.env"
 WEB_FILE="/etc/docklite/docklite-web.env"
@@ -133,14 +163,11 @@ EOF
 fi
 
 echo "Installing Node dependencies..."
-$SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && npm install"
-
-echo "Initializing database..."
-$SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && NODE_ENV=production node -e \"require('./lib/db').initializeDatabase()\""
+$SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && bun install"
 
 if [[ "${INSTALL_MODE}" != "headless" ]]; then
   echo "Building Next.js..."
-  $SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && npm run build"
+  $SUDO -u "${DOCKLITE_USER}" bash -lc "cd '${INSTALL_DIR}' && AGENT_URL=http://127.0.0.1:3000 bun run build"
 fi
 
 echo "Building agent..."
@@ -159,6 +186,28 @@ if [[ "${INSTALL_MODE}" != "headless" ]]; then
 else
   $SUDO systemctl enable --now docklite-agent.service
 fi
+
+echo "Configuring permissions..."
+$SUDO mkdir -p /etc/sudoers.d
+cat <<EOF | $SUDO tee /etc/sudoers.d/docklite >/dev/null
+# Service management
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl restart docklite-agent.service, /usr/bin/systemctl restart docklite-web.service
+# Nginx management
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/sbin/nginx -t
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/sbin/nginx -s reload
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/tee /etc/nginx/sites-available/*
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/ln -sf /etc/nginx/sites-available/* /etc/nginx/sites-enabled/*
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/rm -f /etc/nginx/sites-available/*
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/rm -f /etc/nginx/sites-enabled/*
+# SSL management (certbot)
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/certbot
+# Reading Let's Encrypt certs
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/cat /etc/letsencrypt/live/*/fullchain.pem
+${DOCKLITE_USER} ALL=(root) NOPASSWD: /usr/bin/ls /etc/letsencrypt/live
+EOF
+$SUDO chmod 440 /etc/sudoers.d/docklite
+# Clean up old file if it exists
+$SUDO rm -f /etc/sudoers.d/docklite-update
 
 echo "Done."
 if [[ "${INSTALL_MODE}" != "headless" ]]; then

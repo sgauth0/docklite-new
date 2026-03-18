@@ -713,7 +713,7 @@ export default function NetworkPage() {
                     </div>
                   </div>
                   <div className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-                    Read-only view (Traefik config).
+                    Read-only view (reverse proxy config).
                   </div>
                 </div>
               </div>

@@ -60,7 +60,19 @@ func (h *Handlers) Users(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_ = ensureUserFolder(body.Username)
+		if err := ensureUserFolder(body.Username); err != nil {
+			// User was created but their directory couldn't be made.
+			// Return a warning alongside the created user rather than failing.
+			writeJSON(w, http.StatusCreated, map[string]any{
+				"user": map[string]any{
+					"id":       user.ID,
+					"username": user.Username,
+					"isAdmin":  user.IsAdmin == 1,
+				},
+				"warning": "user created but home directory could not be created: " + err.Error(),
+			})
+			return
+		}
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"user": map[string]any{
 				"id":       user.ID,

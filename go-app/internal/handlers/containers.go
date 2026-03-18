@@ -22,6 +22,42 @@ import (
 
 const siteBaseDir = "/var/www/sites"
 
+func (h *Handlers) getContainerHostPort(ctx context.Context, containerID string, containerPort int) (int, error) {
+	portKey := nat.Port(fmt.Sprintf("%d/tcp", containerPort))
+	// Docker may not have fully populated port bindings immediately after
+	// ContainerStart, so retry a few times before giving up.
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return 0, ctx.Err()
+			case <-time.After(500 * time.Millisecond):
+			}
+		}
+		container, err := h.docker.InspectContainer(ctx, containerID)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if container.NetworkSettings == nil || container.NetworkSettings.Ports == nil {
+			lastErr = fmt.Errorf("no port bindings found")
+			continue
+		}
+		bindings := container.NetworkSettings.Ports[portKey]
+		if len(bindings) == 0 || bindings[0].HostPort == "" {
+			lastErr = fmt.Errorf("no host port binding for %s", portKey)
+			continue
+		}
+		port, err := strconv.Atoi(bindings[0].HostPort)
+		if err != nil {
+			return 0, fmt.Errorf("invalid host port: %s", bindings[0].HostPort)
+		}
+		return port, nil
+	}
+	return 0, lastErr
+}
+
 type createContainerRequest struct {
 	Domain       string `json:"domain"`
 	TemplateType string `json:"template_type"`
@@ -225,6 +261,8 @@ func (h *Handlers) Container(w http.ResponseWriter, r *http.Request) {
 		h.handleStats(w, r, id)
 	case "inspect":
 		h.handleInspect(w, r, id)
+	case "export":
+		h.ExportSite(w, r)
 	case "assign":
 		h.AssignContainer(w, r, id)
 	case "track":
@@ -390,14 +428,29 @@ func (h *Handlers) handleDelete(w http.ResponseWriter, r *http.Request, id strin
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	container, inspErr := h.docker.InspectContainer(ctx, id)
+	var domain string
+	if inspErr == nil && container.Config != nil && container.Config.Labels != nil {
+		domain = container.Config.Labels["docklite.domain"]
+	}
+
 	if err := h.docker.RemoveContainer(ctx, id); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if site != nil {
+		if domain == "" {
+			domain = site.Domain
+		}
 		_ = h.store.DeleteSite(site.ID)
 	}
 	_ = h.store.UnlinkContainerFromAllFolders(id)
+
+	if domain != "" {
+		_ = removeNginxSiteConfig(domain)
+		_ = reloadNginx()
+	}
+
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 
@@ -477,9 +530,9 @@ func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
 	}
 	var existingContainerID string
 	if existingSite != nil && existingSite.ContainerID != nil {
-		ctx, cancel := dockerContext(r.Context())
-		defer cancel()
-		if _, err := h.docker.InspectContainer(ctx, *existingSite.ContainerID); err == nil {
+		checkCtx, checkCancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer checkCancel()
+		if _, err := h.docker.InspectContainer(checkCtx, *existingSite.ContainerID); err == nil {
 			existingContainerID = *existingSite.ContainerID
 		}
 	}
@@ -521,12 +574,17 @@ func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, cancel := dockerContext(r.Context())
-	defer cancel()
+	// Use a long-lived context for image pull + container creation.
+	// Image pulls on a cold host can take several minutes; the short
+	// dockerContext (30 s) would expire while the pull is still running,
+	// leaving ContainerCreate/Start with an already-cancelled context.
+	createCtx, createCancel := ctxWithLongTimeout()
+	defer createCancel()
+
 	if existingContainerID != "" {
-		_ = h.docker.RemoveContainer(ctx, existingContainerID)
+		_ = h.docker.RemoveContainer(createCtx, existingContainerID)
 	}
-	containerID, err := h.docker.CreateSiteContainer(ctx, domain, templateType, includeWww, sitePath, port, site.ID, targetUserID, req.FolderID)
+	containerID, err := h.docker.CreateSiteContainer(createCtx, domain, templateType, includeWww, sitePath, port, site.ID, targetUserID, req.FolderID)
 	if err != nil {
 		_ = h.store.UpdateSiteStatus(site.ID, "failed")
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -539,7 +597,32 @@ func (h *Handlers) createContainer(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = h.store.UpdateSiteStatus(site.ID, "running")
 
-	writeJSON(w, http.StatusOK, map[string]any{"success": true, "site_id": site.ID})
+	// Write .dkl manifest so a future re-install can discover and re-attach
+	// this site without needing to recreate it from scratch.
+	_ = WriteDKLManifest(sitePath, domain, templateType, targetUser.Username, port, includeWww, nil)
+
+	// Determine the actual internal port the container listens on.
+	// Static and PHP containers always use port 80; Node uses the user-specified port.
+	nginxInternalPort := port
+	if templateType == "static" || templateType == "php" {
+		nginxInternalPort = 80
+	}
+
+	nginxWarning := ""
+	hostPort, portErr := h.getContainerHostPort(createCtx, containerID, nginxInternalPort)
+	if portErr == nil && hostPort > 0 {
+		if ngErr := setupNginxForDomain(domain, includeWww, hostPort); ngErr != nil {
+			nginxWarning = fmt.Sprintf("Container created but nginx config failed: %v", ngErr)
+		}
+	} else if portErr != nil {
+		nginxWarning = fmt.Sprintf("Container created but could not detect host port: %v", portErr)
+	}
+
+	resp := map[string]any{"success": true, "site_id": site.ID}
+	if nginxWarning != "" {
+		resp["warning"] = nginxWarning
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func ensureFile(path string, content string) error {

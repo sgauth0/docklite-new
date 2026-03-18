@@ -389,7 +389,8 @@ Prefer agent for Docker operations when possible (better performance, no Node.js
 **Production (Full Stack):**
 - Use `./start-fullstack.sh`
 - GUI on 3001, agent on 3000
-- Put reverse proxy (Caddy/nginx) in front with HTTPS
+- nginx reverse proxy is configured automatically per site
+- SSL via certbot (`/api/ssl/issue` or Certificates tab in Network page)
 
 **Production (Headless):**
 - Use `./start-agent.sh` with `NEXTJS_URL=disabled`

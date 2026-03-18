@@ -104,6 +104,10 @@ func (h *Handlers) CreatePath(w http.ResponseWriter, r *http.Request) {
 		}
 		target = resolved
 	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	switch strings.ToLower(req.Type) {
 	case "folder":
 		if err := os.MkdirAll(target, 0o755); err != nil {
@@ -145,6 +149,10 @@ func (h *Handlers) DeletePath(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	if err := os.RemoveAll(target); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -169,6 +177,10 @@ func (h *Handlers) RenamePath(w http.ResponseWriter, r *http.Request) {
 	source, err := resolveFilesPath(req.Path)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.authorizeFilePath(r, source); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
 	target := filepath.Join(filepath.Dir(source), req.NewName)
@@ -200,6 +212,10 @@ func (h *Handlers) listFiles(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	entries, err := os.ReadDir(target)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -228,6 +244,10 @@ func (h *Handlers) readFile(w http.ResponseWriter, r *http.Request) {
 	target, err := resolveFilesPath(pathParam)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
 	info, err := os.Stat(target)
@@ -279,6 +299,10 @@ func (h *Handlers) saveFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -292,6 +316,30 @@ func (h *Handlers) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+}
+
+// authorizeFilePath enforces that non-admin users can only access their own
+// subdirectory under filesBaseDir. All OS-level ownership belongs to the
+// 'docklite' system user; this function implements DockLite's application-
+// layer access control.
+func (h *Handlers) authorizeFilePath(r *http.Request, resolvedPath string) error {
+	if isAdminRole(r) {
+		return nil
+	}
+	userID, ok := readUserIDFromContext(r)
+	if !ok {
+		return errForbidden
+	}
+	user, err := h.store.GetUserByIDFull(userID)
+	if err != nil || user == nil {
+		return errForbidden
+	}
+	allowedBase := filepath.Clean(filepath.Join(filesBaseDir, user.Username)) + string(filepath.Separator)
+	cleaned := filepath.Clean(resolvedPath) + string(filepath.Separator)
+	if !strings.HasPrefix(cleaned, allowedBase) {
+		return errForbidden
+	}
+	return nil
 }
 
 func resolveFilesPath(pathParam string) (string, error) {

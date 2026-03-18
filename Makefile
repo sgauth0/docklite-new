@@ -21,11 +21,11 @@ build-tui:
 
 # Build the Next.js GUI for production
 build-gui:
-	cd webapp && npm install && npm run build
+	cd webapp && bun install && bun run build
 
 # Install GUI dependencies only (without building)
 install-gui:
-	cd webapp && npm install
+	cd webapp && bun install
 
 # Run the agent in development mode
 run-agent:
@@ -37,15 +37,15 @@ run-tui:
 
 # Run the GUI in development mode (port 3000)
 run-gui:
-	cd webapp && npm run dev
+	cd webapp && bun run dev
 
 # Run the GUI in production mode (port 3000)
 dev-gui:
-	cd webapp && npm run dev
+	cd webapp && bun run dev
 
 # Start GUI in production mode (port 3000, or use PORT env var)
 start-gui:
-	cd webapp && npm start
+	cd webapp && bun run start
 
 # Clean built binaries and Next.js build artifacts
 clean:

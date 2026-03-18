@@ -206,7 +206,7 @@ make clean              # Remove binaries and build artifacts
 | `AGENT_URL` | `http://localhost:3000` | Agent API URL |
 | `AGENT_TOKEN` | (empty) | Agent authentication token |
 | `SESSION_SECRET` | (empty) | Session encryption key (32+ chars) |
-| `ACME_PATH` | (empty) | Path to Traefik acme.json |
+| — | — | SSL is now managed by certbot + nginx (ACME_PATH removed) |
 | `ENABLE_DB_DEBUG` | `false` | Enable database debug UI |
 
 ### TUI Client
@@ -278,7 +278,7 @@ chmod 755 ./bin/*                      # Binaries
 ```
 
 ### Production Deployment
-- Use HTTPS via reverse proxy (Caddy/Nginx)
+- SSL is managed automatically via nginx + certbot (Certificates tab or `/api/ssl/issue`)
 - Do not expose port 3000 publicly without TLS
 - Set strong `SESSION_SECRET` and `DOCKLITE_TOKEN`
 - Run agent as user in `docker` group, not root if possible

@@ -45,6 +45,10 @@ func (h *Handlers) UploadFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := h.authorizeFilePath(r, targetDir); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	info, err := os.Stat(targetDir)
 	if err != nil || !info.IsDir() {
 		writeError(w, http.StatusBadRequest, "target directory not found")
@@ -86,6 +90,10 @@ func (h *Handlers) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	target, err := resolveFilesPath(pathParam)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
 	info, err := os.Stat(target)
@@ -140,9 +148,17 @@ func (h *Handlers) TransferFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := h.authorizeFilePath(r, source); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
 	targetDir, err := resolveFilesPath(req.TargetDir)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.authorizeFilePath(r, targetDir); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
 
@@ -205,6 +221,10 @@ func (h *Handlers) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	target, err := resolveFilesPath(req.Path)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.authorizeFilePath(r, target); err != nil {
+		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
 	if err := os.RemoveAll(target); err != nil {

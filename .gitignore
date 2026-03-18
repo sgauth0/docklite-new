@@ -2,6 +2,12 @@
 *.pid
 data/
 logs/
+.docklite-token
+.docklite-session
+
+# Built binaries
+bin/docklite-agent
+bin/docklite-tui
 
 # Go binaries in source tree
 go-app/docklite-agent
@@ -66,3 +72,7 @@ coverage/
 tmp/
 temp/
 .cache/
+
+# Local backup of git directory
+.git.bak
+.gitignore.root.bak

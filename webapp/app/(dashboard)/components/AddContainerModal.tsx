@@ -59,7 +59,12 @@ export default function AddContainerModal({ onClose, onCreated }: AddContainerMo
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create container');
       }
-      toast.success('Container created and SSL requested');
+      const warning = data.warning;
+      if (warning) {
+        toast.success(`Container created. Note: ${warning}`);
+      } else {
+        toast.success('Container created with nginx proxy configured');
+      }
       onCreated();
       onClose();
     } catch (err: any) {

@@ -6,19 +6,14 @@ export interface NodeTemplateConfig {
   siteId: number;
   userId: number;
   folderId?: number;
-  port?: number; // Internal port the Node app listens on (default: 3000)
+  port?: number;
   includeWww?: boolean;
 }
 
 export function generateNodeTemplate(config: NodeTemplateConfig): Docker.ContainerCreateOptions {
   const containerName = `docklite-site${config.siteId}-${config.domain.replace(/[^a-zA-Z0-9]/g, '-')}`;
-  const sanitizedDomain = config.domain.replace(/[^a-zA-Z0-9]/g, '-');
   const internalPort = config.port || 3000;
   const includeWww = config.includeWww ?? true;
-
-  const hostRule = includeWww && !config.domain.startsWith('www.')
-    ? `Host(\`${config.domain}\`,\`www.${config.domain}\`)`
-    : `Host(\`${config.domain}\`)`;
 
   return {
     Image: 'node:20-alpine',
@@ -37,12 +32,12 @@ export function generateNodeTemplate(config: NodeTemplateConfig): Docker.Contain
         `${config.codePath}:/app:rw`
       ],
       PortBindings: {
-        [`${internalPort}/tcp`]: [{ HostPort: '0' }] // Auto-assign port
+        [`${internalPort}/tcp`]: [{ HostPort: '0' }]
       },
       RestartPolicy: {
         Name: 'unless-stopped'
       },
-      NetworkMode: 'docklite_network' // Connect to Traefik network
+      NetworkMode: 'docklite_network'
     },
     Labels: {
       'docklite.managed': 'true',
@@ -51,13 +46,8 @@ export function generateNodeTemplate(config: NodeTemplateConfig): Docker.Contain
       'docklite.type': 'node',
       'docklite.user.id': config.userId.toString(),
       'docklite.folder.id': config.folderId?.toString() || '',
-      // Traefik labels
-      'traefik.enable': 'true',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.rule`]: hostRule,
-      [`traefik.http.routers.docklite-${sanitizedDomain}.entrypoints`]: 'websecure',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.tls`]: 'true',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.tls.certresolver`]: 'letsencrypt',
-      [`traefik.http.services.docklite-${sanitizedDomain}.loadbalancer.server.port`]: internalPort.toString(),
+      'docklite.include_www': includeWww ? 'true' : 'false',
+      'docklite.internal_port': internalPort.toString(),
     }
   };
 }

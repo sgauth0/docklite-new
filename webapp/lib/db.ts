@@ -124,7 +124,7 @@ function seedAdminUser() {
           return;
         }
         const devUsername = 'superadmin';
-        const devPassword = 'admin';
+        const devPassword = 'supersecretpassword123';
         const passwordHash = bcrypt.hashSync(devPassword, 10);
         db.prepare(`
           INSERT INTO users (username, password_hash, is_admin, role, is_super_admin, managed_by)

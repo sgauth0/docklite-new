@@ -11,12 +11,7 @@ export interface StaticTemplateConfig {
 
 export function generateStaticTemplate(config: StaticTemplateConfig): Docker.ContainerCreateOptions {
   const containerName = `docklite-site${config.siteId}-${config.domain.replace(/[^a-zA-Z0-9]/g, '-')}`;
-  const sanitizedDomain = config.domain.replace(/[^a-zA-Z0-9]/g, '-'); // Remove ALL special chars including dots
   const includeWww = config.includeWww ?? true;
-
-  const hostRule = includeWww && !config.domain.startsWith('www.')
-    ? `Host(\`${config.domain}\`,\`www.${config.domain}\`)`
-    : `Host(\`${config.domain}\`)`;
 
   return {
     Image: 'nginx:alpine',
@@ -29,12 +24,12 @@ export function generateStaticTemplate(config: StaticTemplateConfig): Docker.Con
         `${config.codePath}:/usr/share/nginx/html:ro`
       ],
       PortBindings: {
-        '80/tcp': [{ HostPort: '0' }] // Auto-assign port
+        '80/tcp': [{ HostPort: '0' }]
       },
       RestartPolicy: {
         Name: 'unless-stopped'
       },
-      NetworkMode: 'docklite_network' // Connect to Traefik network
+      NetworkMode: 'docklite_network'
     },
     Labels: {
       'docklite.managed': 'true',
@@ -43,13 +38,8 @@ export function generateStaticTemplate(config: StaticTemplateConfig): Docker.Con
       'docklite.type': 'static',
       'docklite.user.id': config.userId.toString(),
       'docklite.folder.id': config.folderId?.toString() || '',
-      // Traefik labels
-      'traefik.enable': 'true',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.rule`]: hostRule,
-      [`traefik.http.routers.docklite-${sanitizedDomain}.entrypoints`]: 'websecure',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.tls`]: 'true',
-      [`traefik.http.routers.docklite-${sanitizedDomain}.tls.certresolver`]: 'letsencrypt',
-      [`traefik.http.services.docklite-${sanitizedDomain}.loadbalancer.server.port`]: '80',
+      'docklite.include_www': includeWww ? 'true' : 'false',
+      'docklite.internal_port': '80',
     }
   };
 }

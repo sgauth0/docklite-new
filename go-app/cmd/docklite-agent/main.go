@@ -46,6 +46,10 @@ func main() {
 
 	backup.StartScheduler(sqliteStore, dockerClient, cfg.BackupBaseDir)
 
+	// Pull site images in the background so they are cached before the first
+	// container creation request. This prevents proxy timeouts on first use.
+	dockerClient.PrewarmImages(context.Background())
+
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           router,
