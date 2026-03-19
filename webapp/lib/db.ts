@@ -124,13 +124,13 @@ function seedAdminUser() {
           return;
         }
         const devUsername = 'superadmin';
-        const devPassword = 'supersecretpassword123';
+        const devPassword = 'changeme';
         const passwordHash = bcrypt.hashSync(devPassword, 10);
         db.prepare(`
           INSERT INTO users (username, password_hash, is_admin, role, is_super_admin, managed_by)
           VALUES (?, ?, 1, 'super_admin', 1, NULL)
         `).run(devUsername, passwordHash);
-        console.log(`✓ Superadmin user created (username: ${devUsername}, password: ${devPassword})`);
+        console.log(`✓ Superadmin user created (username: ${devUsername}, password: ${devPassword}) — CHANGE THIS PASSWORD`);
         return;
       }
 
