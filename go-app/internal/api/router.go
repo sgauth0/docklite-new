@@ -34,6 +34,7 @@ func NewRouter(handlers *handlers.Handlers, nextjsURL string) http.Handler {
 	mux.HandleFunc("/api/files/folder", handlers.Auth(handlers.DeleteFolder))
 	mux.HandleFunc("/api/server/stats", handlers.Auth(handlers.ServerStats))
 	mux.HandleFunc("/api/server/overview", handlers.Auth(handlers.ServerOverview))
+	mux.HandleFunc("/api/server/ports", handlers.Auth(handlers.ServicePorts))
 	mux.HandleFunc("/api/server/updates", handlers.Auth(handlers.ServerUpdates))
 	mux.HandleFunc("/api/server/services", handlers.Auth(handlers.ServerServices))
 	mux.HandleFunc("/api/server/services/action", handlers.Auth(handlers.ServerServiceAction))

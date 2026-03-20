@@ -216,18 +216,32 @@ func (h *Handlers) ListAllContainers(w http.ResponseWriter, r *http.Request) {
 		untrackedSet[id] = struct{}{}
 	}
 
-	type containerWithTracking struct {
+	type containerResult struct {
 		models.ContainerInfo
-		Tracked bool `json:"tracked"`
+		Tracked     bool   `json:"tracked"`
+		SiteID      *int64 `json:"siteId,omitempty"`
+		Domain      string `json:"domain,omitempty"`
+		CodePath    string `json:"codePath,omitempty"`
+		HasManifest bool   `json:"hasManifest"`
 	}
 
-	results := make([]containerWithTracking, 0, len(containers))
-	for _, container := range containers {
-		_, untracked := untrackedSet[container.ID]
-		results = append(results, containerWithTracking{
-			ContainerInfo: container,
-			Tracked:       !untracked,
-		})
+	results := make([]containerResult, 0, len(containers))
+	for _, c := range containers {
+		_, isUntracked := untrackedSet[c.ID]
+		r := containerResult{
+			ContainerInfo: c,
+			Tracked:       !isUntracked,
+		}
+		if site, err := h.store.GetSiteByContainerIDRecord(c.ID); err == nil && site != nil {
+			r.SiteID = &site.ID
+			r.Domain = site.Domain
+			r.CodePath = site.CodePath
+			if site.CodePath != "" {
+				_, statErr := os.Stat(filepath.Join(site.CodePath, dklFilename))
+				r.HasManifest = statErr == nil
+			}
+		}
+		results = append(results, r)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"containers": results})
@@ -269,6 +283,10 @@ func (h *Handlers) Container(w http.ResponseWriter, r *http.Request) {
 		h.TrackContainer(w, r, id)
 	case "untrack":
 		h.UntrackContainer(w, r, id)
+	case "write-manifest":
+		h.WriteContainerManifest(w, r, id)
+	case "claim":
+		h.ClaimContainer(w, r, id)
 	case "terminal":
 		h.ContainerTerminal(w, r, id)
 	case "":

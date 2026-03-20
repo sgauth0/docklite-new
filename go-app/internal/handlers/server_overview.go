@@ -1260,3 +1260,43 @@ func runCommandTimeout(timeout time.Duration, name string, args ...string) (stri
 	}
 	return result, nil
 }
+
+type servicePortsResponse struct {
+	AgentAddr  string `json:"agentAddr"`
+	AgentPort  int    `json:"agentPort"`
+	WebURL     string `json:"webUrl"`
+	WebPort    int    `json:"webPort"`
+	Headless   bool   `json:"headless"`
+}
+
+func (h *Handlers) ServicePorts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	agentPort := 3000
+	addr := h.listenAddr
+	if strings.HasPrefix(addr, ":") {
+		if p, err := strconv.Atoi(addr[1:]); err == nil {
+			agentPort = p
+		}
+	}
+
+	webPort := 0
+	webURL := h.nextjsURL
+	headless := webURL == ""
+	if !headless {
+		if p, err := strconv.Atoi(strings.TrimPrefix(webURL[strings.LastIndex(webURL, ":")+1:], "/")); err == nil {
+			webPort = p
+		}
+	}
+
+	writeJSON(w, http.StatusOK, servicePortsResponse{
+		AgentAddr: addr,
+		AgentPort: agentPort,
+		WebURL:    webURL,
+		WebPort:   webPort,
+		Headless:  headless,
+	})
+}

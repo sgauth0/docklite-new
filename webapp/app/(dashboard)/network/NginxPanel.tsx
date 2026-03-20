@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowClockwise,
   CheckCircle,
-  ChevronDown,
-  ChevronUp,
+  CaretDown,
+  CaretUp,
   SpinnerGap,
   Warning,
   XCircle,
@@ -260,7 +260,7 @@ export default function NginxPanel() {
                         unsaved
                       </span>
                     )}
-                    {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {open ? <CaretUp size={14} /> : <CaretDown size={14} />}
                   </div>
                 </button>
 
