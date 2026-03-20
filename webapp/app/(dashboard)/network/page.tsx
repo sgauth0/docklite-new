@@ -13,9 +13,11 @@ import {
   CheckCircle,
   XCircle,
   SpinnerGap,
+  Stack,
 } from '@phosphor-icons/react';
 import SslStatus from '../components/SslStatus';
 import DnsPanel from './DnsPanel';
+import NginxPanel from './NginxPanel';
 
 interface NetworkAddress {
   family: string;
@@ -131,7 +133,7 @@ interface DiagnosticsResponse {
   results: DiagnosticResult[];
 }
 
-type NetworkTab = 'identity' | 'dns' | 'firewall' | 'ingress' | 'certs' | 'diagnostics';
+type NetworkTab = 'identity' | 'dns' | 'firewall' | 'ingress' | 'certs' | 'nginx' | 'diagnostics';
 
 const tabs: Array<{ key: NetworkTab; label: string; icon: JSX.Element }> = [
   { key: 'identity', label: 'Identity', icon: <WifiHigh size={18} weight="duotone" /> },
@@ -139,6 +141,7 @@ const tabs: Array<{ key: NetworkTab; label: string; icon: JSX.Element }> = [
   { key: 'firewall', label: 'Firewall', icon: <ShieldCheck size={18} weight="duotone" /> },
   { key: 'ingress', label: 'Ingress', icon: <Plug size={18} weight="duotone" /> },
   { key: 'certs', label: 'Certificates', icon: <Lock size={18} weight="duotone" /> },
+  { key: 'nginx', label: 'Nginx', icon: <Stack size={18} weight="duotone" /> },
   { key: 'diagnostics', label: 'Diagnostics', icon: <Pulse size={18} weight="duotone" /> },
 ];
 
@@ -749,6 +752,10 @@ export default function NetworkPage() {
 
       {activeTab === 'certs' && (
         <SslStatus />
+      )}
+
+      {activeTab === 'nginx' && (
+        <NginxPanel />
       )}
 
       {activeTab === 'diagnostics' && (

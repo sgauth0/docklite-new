@@ -298,12 +298,35 @@ func (h *Handlers) handleLifecycle(w http.ResponseWriter, r *http.Request, id st
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	isStopping := strings.Contains(r.URL.Path, "/stop")
 	if site != nil {
 		status := "running"
-		if strings.Contains(r.URL.Path, "/stop") {
+		if isStopping {
 			status = "stopped"
 		}
 		_ = h.store.UpdateSiteStatus(site.ID, status)
+	}
+	// After a start or restart, the container may have received a new random
+	// host port (Docker re-draws from the ephemeral range each time).
+	// Re-detect the port and rewrite the nginx upstream so the site stays live.
+	if !isStopping {
+		if info, inspErr := h.docker.InspectContainer(ctx, id); inspErr == nil {
+			labels := info.Config.Labels
+			if labels["docklite.managed"] == "true" {
+				domain := labels["docklite.domain"]
+				includeWww := labels["docklite.include_www"] == "true"
+				internalPortStr := labels["docklite.internal_port"]
+				internalPort := 80
+				if p, err := strconv.Atoi(internalPortStr); err == nil && p > 0 {
+					internalPort = p
+				}
+				if domain != "" {
+					if hostPort, portErr := h.getContainerHostPort(ctx, id, internalPort); portErr == nil && hostPort > 0 {
+						_ = setupNginxForDomain(domain, includeWww, hostPort)
+					}
+				}
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }

@@ -13,6 +13,7 @@ type Handlers struct {
 	store         *store.SQLiteStore
 	token         string
 	backupBaseDir string
+	sslManager    *SSLManager
 }
 
 func New(dockerClient *docker.Client, store *store.SQLiteStore, token string, backupBaseDir string) *Handlers {
