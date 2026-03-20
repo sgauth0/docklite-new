@@ -203,7 +203,7 @@ setup_user_and_dirs() {
     $SUDO mkdir -p "$INSTALL_DIR"
     $SUDO rsync -a --delete \
       --exclude node_modules --exclude .next --exclude data \
-      --exclude "*.log" --exclude ".git" \
+      --exclude "*.log" --exclude ".git" --exclude ".bun" \
       "${REPO_DIR}/" "${INSTALL_DIR}/"
     ok "Files copied to ${INSTALL_DIR}"
   else
@@ -249,22 +249,22 @@ EOF
 build_gui() {
   local dir="$1" port="$2"
   echo "  Installing Node dependencies..."
-  $SUDO -u "$DOCKLITE_USER" bash -lc "cd '${dir}/webapp' && ${BUN_CMD} install" 2>&1 | tail -2
+  sudo -u "$DOCKLITE_USER" bash -lc "cd '${dir}/webapp' && ${BUN_CMD} install" 2>&1 | tail -2
   ok "Node dependencies installed"
   echo "  Building Next.js..."
-  $SUDO -u "$DOCKLITE_USER" bash -lc \
+  sudo -u "$DOCKLITE_USER" bash -lc \
     "cd '${dir}/webapp' && AGENT_URL=http://127.0.0.1:${port} ${BUN_CMD} run build" 2>&1 | tail -3
   ok "Next.js built"
 }
 
 build_agent() {
-  $SUDO -u "$DOCKLITE_USER" bash -lc \
+  sudo -u "$DOCKLITE_USER" bash -lc \
     "cd '${1}/go-app' && PATH=/usr/local/go/bin:/usr/bin:/bin go build -buildvcs=false -o ../bin/docklite-agent ./cmd/docklite-agent/." \
     && ok "Agent binary built" || warn "Agent build failed"
 }
 
 build_tui() {
-  $SUDO -u "$DOCKLITE_USER" bash -lc \
+  sudo -u "$DOCKLITE_USER" bash -lc \
     "cd '${1}/cli-repo' && PATH=/usr/local/go/bin:/usr/bin:/bin go build -buildvcs=false -o ../bin/docklite-tui ." \
     && ok "TUI binary built" || warn "TUI build failed (optional)"
 }
