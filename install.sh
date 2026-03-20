@@ -377,6 +377,7 @@ run_repair() {
   if [[ "$REPO_DIR" != "$INSTALL_DIR" ]]; then
     $SUDO rsync -a --delete       --exclude node_modules --exclude .next --exclude data       --exclude "*.log" --exclude ".git" --exclude ".bun"       "${REPO_DIR}/" "${INSTALL_DIR}/"
     ok "Files synced from ${REPO_DIR}"
+    $SUDO chown -R "${DOCKLITE_USER}:${DOCKLITE_USER}" "${INSTALL_DIR}" 2>/dev/null || true
   fi
 
   step "Detecting installation"
