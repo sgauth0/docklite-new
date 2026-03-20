@@ -373,6 +373,12 @@ run_fresh_install() {
 # REPAIR
 # ══════════════════════════════════════════════════════════════════════════════
 run_repair() {
+  step "Syncing source files to ${INSTALL_DIR}"
+  if [[ "$REPO_DIR" != "$INSTALL_DIR" ]]; then
+    $SUDO rsync -a --delete       --exclude node_modules --exclude .next --exclude data       --exclude "*.log" --exclude ".git" --exclude ".bun"       "${REPO_DIR}/" "${INSTALL_DIR}/"
+    ok "Files synced from ${REPO_DIR}"
+  fi
+
   step "Detecting installation"
   local AGENT_PORT="3000" INSTALL_MODE="full"
   if [[ -f "$AGENT_ENV_FILE" ]]; then
