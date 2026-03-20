@@ -63,62 +63,6 @@ stop_docklite() {
   [[ $stopped -eq 0 ]] && ok "No running DockLite instances found"
 }
 
-# ── auto-write .dkl manifests for previously-managed containers ───────────────
-# Silently writes .dkl files for any Docker container labelled
-# docklite.managed=true that has a site directory on disk but is missing its
-# manifest. This preserves discoverability across reinstalls.
-write_dkl_for_managed_containers() {
-  step "Preserving .dkl manifests for previously-managed containers"
-  if ! command -v docker >/dev/null 2>&1; then
-    warn "docker not found — skipping manifest preservation"
-    return
-  fi
-  local written=0 skipped=0
-  while IFS= read -r cid; do
-    [[ -z "$cid" ]] && continue
-    local domain template_type username internal_port include_www
-    domain=$(docker inspect --format '{{index .Config.Labels "docklite.domain"}}' "$cid" 2>/dev/null || true)
-    [[ -z "$domain" ]] && continue
-    template_type=$(docker inspect --format '{{index .Config.Labels "docklite.template_type"}}' "$cid" 2>/dev/null || echo "static")
-    [[ -z "$template_type" ]] && template_type="static"
-    username=$(docker inspect --format '{{index .Config.Labels "docklite.username"}}' "$cid" 2>/dev/null || echo "docklite")
-    [[ -z "$username" ]] && username="docklite"
-    internal_port=$(docker inspect --format '{{index .Config.Labels "docklite.internal_port"}}' "$cid" 2>/dev/null || echo "80")
-    [[ -z "$internal_port" ]] && internal_port="80"
-    include_www=$(docker inspect --format '{{index .Config.Labels "docklite.include_www"}}' "$cid" 2>/dev/null || echo "false")
-    [[ -z "$include_www" ]] && include_wow="false"
-    local code_path="${SITE_BASE}/${username}/${domain}"
-    local dkl_path="${code_path}/.dkl"
-    if [[ ! -d "$code_path" ]]; then
-      skipped=$((skipped+1))
-      continue
-    fi
-    if [[ -f "$dkl_path" ]]; then
-      ok ".dkl exists: ${domain}"
-      skipped=$((skipped+1))
-      continue
-    fi
-    # Write the manifest using python3
-    local img="nginx:alpine"
-    [[ "$template_type" == "node" ]] && img="node:20-alpine"
-    local include_www_bool="false"
-    [[ "$include_www" == "true" ]] && include_www_bool="true"
-    python3 -c "
-import json; from datetime import datetime, timezone
-print(json.dumps({'version':'1','domain':'${domain}','templateType':'${template_type}',
-  'image':'${img}','internalPort':int('${internal_port}'),'port':3000,
-  'includeWww':${include_www_bool},'username':'${username}',
-  'createdAt':datetime.now(timezone.utc).isoformat().replace('+00:00','Z')},indent=2))
-" > "$dkl_path" 2>/dev/null \
-      && ok "Wrote .dkl: ${domain}" && written=$((written+1)) \
-      || warn "Failed to write .dkl for ${domain}"
-  done < <(docker ps -a --filter "label=docklite.managed=true" --format "{{.ID}}" 2>/dev/null || true)
-  if [[ $written -eq 0 && $skipped -eq 0 ]]; then
-    ok "No previously-managed containers found"
-  elif [[ $written -gt 0 ]]; then
-    ok "${written} manifest(s) written — these sites are now discoverable by DockLite"
-  fi
-}
 
 # ── system packages ────────────────────────────────────────────────────────────
 install_system_packages() {
@@ -406,8 +350,6 @@ run_fresh_install() {
     ok "Services started"
   fi
 
-  # After install: silently write .dkl manifests for previously-managed containers
-  write_dkl_for_managed_containers
 
   local token
   token=$(grep -E '^DOCKLITE_TOKEN=' "$AGENT_ENV_FILE" | cut -d= -f2)
@@ -481,7 +423,6 @@ run_repair() {
     ok "Services restarted"
   fi
 
-  write_dkl_for_managed_containers
 
   echo ""
   ok "Repair complete — http://<your-server-ip>:${AGENT_PORT}"
