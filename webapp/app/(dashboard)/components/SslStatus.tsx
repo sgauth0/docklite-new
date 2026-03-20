@@ -1,46 +1,55 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Lock,
+  CheckCircle,
+  WarningCircle,
+  XCircle,
+  Circle,
+  ArrowClockwise,
+  SpinnerGap,
+  Plus,
+  Trash,
+} from '@phosphor-icons/react';
 import { useToast } from '@/lib/hooks/useToast';
 
-interface SslStatus {
+interface SslCert {
   domain: string;
+  domains?: string[];
   hasSSL: boolean;
   expiryDate: string | null;
   daysUntilExpiry: number | null;
-  status: 'valid' | 'expiring' | 'expired' | 'none';
+  status: 'valid' | 'expiring' | 'expired' | 'none' | 'unknown';
 }
 
 interface SslMeta {
-  acmePath?: string | null;
+  provider?: string;
   certCount?: number;
-  hostsFound?: number;
   managedCount?: number;
-  allCount?: number;
 }
 
 export default function SslStatus() {
-  const [sslStatus, setSslStatus] = useState<SslStatus[]>([]);
-  const [allSslStatus, setAllSslStatus] = useState<SslStatus[]>([]);
+  const [managedCerts, setManagedCerts] = useState<SslCert[]>([]);
+  const [allCerts, setAllCerts] = useState<SslCert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [meta, setMeta] = useState<SslMeta | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const toast = useToast();
 
   const fetchSslStatus = async () => {
     setRefreshing(true);
     try {
       const res = await fetch('/api/ssl/status');
-      if (!res.ok) {
-        throw new Error('Failed to fetch SSL status');
-      }
+      if (!res.ok) throw new Error('Failed to fetch SSL status');
       const data = await res.json();
-      setSslStatus(data.sites || []);
-      setAllSslStatus(data.allSites || []);
+      setManagedCerts(data.sites || []);
+      setAllCerts(data.allCerts || []);
       setMeta(data.meta || null);
       setError('');
       setLastChecked(new Date());
@@ -52,67 +61,95 @@ export default function SslStatus() {
     }
   };
 
-  const repairSsl = async (domain: string) => {
+  const issueSsl = async (domain: string, includeWww: boolean, email: string) => {
+    setActionLoading(domain);
     try {
-      const res = await fetch('/api/ssl/repair', {
+      const res = await fetch('/api/ssl/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain, includeWww, email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.error || 'Failed to issue SSL');
+      toast.success(`SSL certificate issued for ${domain}`);
+      fetchSslStatus();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to issue SSL');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const renewSsl = async (domain: string) => {
+    setActionLoading(domain);
+    try {
+      const res = await fetch('/api/ssl/renew', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to trigger repair');
-      }
-      toast.success(`Repair triggered for ${domain}`);
+      if (!res.ok) throw new Error(data.detail || data.error || 'Failed to renew SSL');
+      toast.success(`SSL certificate renewed for ${domain}`);
       fetchSslStatus();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to repair SSL');
+      toast.error(err.message || 'Failed to renew SSL');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const deleteSsl = async (domain: string) => {
+    if (!confirm(`Delete SSL certificate for ${domain}? This cannot be undone.`)) return;
+    setActionLoading(domain);
+    try {
+      const res = await fetch('/api/ssl/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.error || 'Failed to delete SSL');
+      toast.success(`SSL certificate deleted for ${domain}`);
+      fetchSslStatus();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete SSL');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   useEffect(() => {
     fetchSslStatus();
-
-    // Refresh every 5 minutes
     const interval = setInterval(fetchSslStatus, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showAllModal) {
+    if (showAllModal || showIssueModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showAllModal]);
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showAllModal, showIssueModal]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'valid':
-        return 'var(--neon-green)';
-      case 'expiring':
-        return '#ffa500';
-      case 'expired':
-        return '#ff6b6b';
-      default:
-        return 'var(--text-secondary)';
+      case 'valid': return 'var(--neon-green)';
+      case 'expiring': return 'var(--status-warning)';
+      case 'expired': return 'var(--status-error)';
+      case 'unknown': return 'var(--text-secondary)';
+      default: return 'var(--text-secondary)';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'valid':
-        return '✓';
-      case 'expiring':
-        return '⚠';
-      case 'expired':
-        return '✗';
-      default:
-        return '○';
+      case 'valid': return <CheckCircle size={14} weight="duotone" />;
+      case 'expiring': return <WarningCircle size={14} weight="duotone" />;
+      case 'expired': return <XCircle size={14} weight="duotone" />;
+      default: return <Circle size={14} weight="duotone" />;
     }
   };
 
@@ -120,13 +157,9 @@ export default function SslStatus() {
     if (!date) return 'Unknown';
     const expiryDate = new Date(date);
     const formatted = expiryDate.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+      year: 'numeric', month: 'short', day: 'numeric',
     });
-    if (days !== null) {
-      return `${formatted} (${days}d)`;
-    }
+    if (days !== null) return `${formatted} (${days}d)`;
     return formatted;
   };
 
@@ -135,156 +168,224 @@ export default function SslStatus() {
       <div className="card-vapor p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h2 className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
-              🔒 SSL Certificates (DockLite Managed)
+            <h2 className="text-2xl font-bold neon-text flex items-center gap-2" style={{ color: 'var(--neon-cyan)' }}>
+              <Lock size={20} weight="duotone" />
+              SSL Certificates
             </h2>
             <div className="text-xs font-mono mt-1 space-y-1" style={{ color: 'var(--text-secondary)' }}>
               <div>Last checked: {lastChecked ? lastChecked.toLocaleTimeString() : '—'}</div>
-              {meta?.acmePath && <div>ACME: {meta.acmePath}</div>}
-              {typeof meta?.managedCount === 'number' && <div>Managed containers: {meta.managedCount}</div>}
-              {typeof meta?.allCount === 'number' && <div>Total certs: {meta.allCount}</div>}
+              {meta?.provider && <div>Provider: {meta.provider}</div>}
+              {typeof meta?.managedCount === 'number' && <div>Managed sites: {meta.managedCount}</div>}
+              {typeof meta?.certCount === 'number' && <div>Total certs: {meta.certCount}</div>}
             </div>
             {error && (
-              <div className="text-xs font-bold mt-1" style={{ color: '#ff6b6b' }}>
-                ❌ {error}
+              <div className="text-xs font-bold mt-1 flex items-center gap-2" style={{ color: 'var(--status-error)' }}>
+                <XCircle size={14} weight="duotone" />
+                {error}
               </div>
             )}
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowIssueModal(true)}
+              className="btn-neon px-4 py-2 text-sm font-bold"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Plus size={14} weight="bold" />
+                Issue SSL
+              </span>
+            </button>
+            <button
               onClick={() => setShowAllModal(true)}
-              disabled={loading || allSslStatus.length === 0}
+              disabled={loading || allCerts.length === 0}
               className="btn-neon px-4 py-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              View All Certs ({meta?.allCount || 0})
+              View All ({meta?.certCount || 0})
             </button>
             <button
               onClick={fetchSslStatus}
               disabled={refreshing}
               className="btn-neon px-4 py-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {refreshing ? 'Refreshing…' : 'Refresh'}
+              {refreshing ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+                  Refreshing…
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <ArrowClockwise size={14} weight="duotone" />
+                  Refresh
+                </span>
+              )}
             </button>
           </div>
         </div>
-      {loading ? (
-        <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-          ⟳ Loading SSL status...
-        </div>
-      ) : sslStatus.length === 0 ? (
-        <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-          No DockLite-managed domains with SSL found
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full font-mono text-sm">
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--neon-purple)' }}>
-                <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                  DOMAIN
-                </th>
-                <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                  STATUS
-                </th>
-                <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                  EXPIRES
-                </th>
-                <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                  ACTIONS
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sslStatus.map((cert) => (
-                <tr
-                  key={cert.domain}
-                  className="hover:bg-white/5 transition-colors"
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
-                >
-                  <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
-                    {cert.domain}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span style={{ color: getStatusColor(cert.status) }}>
-                      {getStatusIcon(cert.status)} {cert.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4" style={{ color: 'var(--text-secondary)' }}>
-                    {cert.hasSSL ? formatExpiryDate(cert.expiryDate, cert.daysUntilExpiry) : 'No SSL'}
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => repairSsl(cert.domain)}
-                      className="btn-neon px-3 py-1 text-xs font-bold"
-                    >
-                      Repair SSL
-                    </button>
-                  </td>
+
+        {loading ? (
+          <div className="text-sm font-mono flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+            <SpinnerGap size={14} weight="duotone" className="animate-spin" />
+            Loading SSL status...
+          </div>
+        ) : managedCerts.length === 0 ? (
+          <div className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
+            No DockLite-managed domains found. Create a site container to get started.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full font-mono text-sm">
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--neon-purple)' }}>
+                  <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>DOMAIN</th>
+                  <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>STATUS</th>
+                  <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>EXPIRES</th>
+                  <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>ACTIONS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {managedCerts.map((cert) => (
+                  <tr
+                    key={cert.domain}
+                    className="hover:bg-white/5 transition-colors"
+                    style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
+                  >
+                    <td className="py-3 px-4">
+                      <div style={{ color: 'var(--neon-cyan)' }}>{cert.domain}</div>
+                      {cert.domains && cert.domains.length > 1 && (
+                        <div className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+                          {cert.domains.join(', ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1" style={{ color: getStatusColor(cert.status) }}>
+                        {getStatusIcon(cert.status)} {cert.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4" style={{ color: 'var(--text-secondary)' }}>
+                      {cert.hasSSL ? formatExpiryDate(cert.expiryDate, cert.daysUntilExpiry) : 'No SSL'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        {cert.hasSSL ? (
+                          <>
+                            <button
+                              onClick={() => renewSsl(cert.domain)}
+                              disabled={actionLoading === cert.domain}
+                              className="btn-neon px-3 py-1 text-xs font-bold disabled:opacity-50"
+                            >
+                              {actionLoading === cert.domain ? (
+                                <SpinnerGap size={12} className="animate-spin" />
+                              ) : (
+                                'Renew'
+                              )}
+                            </button>
+                            <button
+                              onClick={() => deleteSsl(cert.domain)}
+                              disabled={actionLoading === cert.domain}
+                              className="px-3 py-1 text-xs font-bold rounded border transition-colors"
+                              style={{
+                                borderColor: 'var(--status-error)',
+                                color: 'var(--status-error)',
+                              }}
+                            >
+                              <Trash size={12} weight="bold" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => issueSsl(cert.domain, true, '')}
+                            disabled={actionLoading === cert.domain}
+                            className="btn-neon px-3 py-1 text-xs font-bold disabled:opacity-50"
+                          >
+                            {actionLoading === cert.domain ? (
+                              <SpinnerGap size={12} className="animate-spin" />
+                            ) : (
+                              'Issue SSL'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* All Certificates Modal */}
+      {showIssueModal && <IssueSslModal onClose={() => setShowIssueModal(false)} onIssue={issueSsl} loading={!!actionLoading} />}
+
       {showAllModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+          style={{ backgroundColor: 'var(--modal-backdrop, rgba(0, 0, 0, 0.8))' }}
           onClick={() => setShowAllModal(false)}
         >
-          <div
-            className="card-vapor p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="card-vapor p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold neon-text" style={{ color: 'var(--neon-cyan)' }}>
                 All SSL Certificates
               </h2>
-              <button
-                onClick={() => setShowAllModal(false)}
-                className="btn-neon px-4 py-2 text-sm font-bold"
-              >
+              <button onClick={() => setShowAllModal(false)} className="btn-neon px-4 py-2 text-sm font-bold">
                 Close
               </button>
             </div>
             <div className="text-xs font-mono mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Showing all {allSslStatus.length} certificates from {meta?.acmePath}
+              Showing all {allCerts.length} certificates from certbot / Let&apos;s Encrypt
             </div>
             <div className="overflow-x-auto">
               <table className="w-full font-mono text-sm">
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--neon-purple)' }}>
-                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                      DOMAIN
-                    </th>
-                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                      STATUS
-                    </th>
-                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>
-                      EXPIRES
-                    </th>
+                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>DOMAIN</th>
+                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>STATUS</th>
+                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>EXPIRES</th>
+                    <th className="text-left py-3 px-4" style={{ color: 'var(--neon-pink)' }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {allSslStatus.map((cert) => (
+                  {allCerts.map((cert) => (
                     <tr
                       key={cert.domain}
                       className="hover:bg-white/5 transition-colors"
-                      style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                      style={{ borderBottom: '1px solid rgba(var(--text-muted-rgb), 0.1)' }}
                     >
-                      <td className="py-3 px-4" style={{ color: 'var(--neon-cyan)' }}>
-                        {cert.domain}
+                      <td className="py-3 px-4">
+                        <div style={{ color: 'var(--neon-cyan)' }}>{cert.domain}</div>
+                        {cert.domains && cert.domains.length > 1 && (
+                          <div className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+                            {cert.domains.join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4">
-                        <span style={{ color: getStatusColor(cert.status) }}>
+                        <span className="inline-flex items-center gap-1" style={{ color: getStatusColor(cert.status) }}>
                           {getStatusIcon(cert.status)} {cert.status.toUpperCase()}
                         </span>
                       </td>
                       <td className="py-3 px-4" style={{ color: 'var(--text-secondary)' }}>
                         {formatExpiryDate(cert.expiryDate, cert.daysUntilExpiry)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => renewSsl(cert.domain)}
+                            disabled={actionLoading === cert.domain}
+                            className="btn-neon px-3 py-1 text-xs font-bold disabled:opacity-50"
+                          >
+                            {actionLoading === cert.domain ? <SpinnerGap size={12} className="animate-spin" /> : 'Renew'}
+                          </button>
+                          <button
+                            onClick={() => deleteSsl(cert.domain)}
+                            disabled={actionLoading === cert.domain}
+                            className="px-3 py-1 text-xs font-bold rounded border transition-colors"
+                            style={{ borderColor: 'var(--status-error)', color: 'var(--status-error)' }}
+                          >
+                            <Trash size={12} weight="bold" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -295,5 +396,84 @@ export default function SslStatus() {
         </div>
       )}
     </>
+  );
+}
+
+function IssueSslModal({ onClose, onIssue, loading }: { onClose: () => void; onIssue: (domain: string, includeWww: boolean, email: string) => Promise<void>; loading: boolean }) {
+  const [domain, setDomain] = useState('');
+  const [includeWww, setIncludeWww] = useState(true);
+  const [email, setEmail] = useState('');
+
+  const handleSubmit = async () => {
+    if (!domain.trim()) return;
+    await onIssue(domain.trim(), includeWww, email.trim());
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--modal-backdrop, rgba(0, 0, 0, 0.8))' }}
+      onClick={onClose}
+    >
+      <div className="card-vapor max-w-lg w-full p-6 rounded-2xl border-2 border-neon-purple/40" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--neon-purple)' }}>SSL Certificate</div>
+            <div className="text-2xl font-bold" style={{ color: 'var(--neon-cyan)' }}>Issue New Certificate</div>
+          </div>
+          <button onClick={onClose} className="btn-neon px-3 py-1 text-sm font-bold">✕</button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: 'var(--neon-cyan)' }}>Domain</label>
+            <input
+              className="input-vapor w-full px-3 py-2 font-mono"
+              placeholder="example.com"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold block mb-2" style={{ color: 'var(--neon-cyan)' }}>Email (optional)</label>
+            <input
+              className="input-vapor w-full px-3 py-2 font-mono"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              For Let&apos;s Encrypt renewal notifications. Leave blank to skip.
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="ssl-include-www"
+              type="checkbox"
+              className="w-4 h-4 accent-cyan-400"
+              checked={includeWww}
+              onChange={(e) => setIncludeWww(e.target.checked)}
+            />
+            <label htmlFor="ssl-include-www" className="text-sm" style={{ color: 'var(--neon-purple)' }}>
+              Include www.{domain || 'example.com'}
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={onClose} className="btn-neon px-4 py-2 font-bold" disabled={loading}>Cancel</button>
+            <button onClick={handleSubmit} className="btn-neon px-6 py-2 font-bold" disabled={loading || !domain.trim()}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerGap size={14} className="animate-spin" /> Issuing…
+                </span>
+              ) : 'Issue Certificate'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

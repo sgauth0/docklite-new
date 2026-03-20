@@ -4,13 +4,28 @@ export const version = '002';
 export const name = 'add_user_roles';
 
 export function up(db: Database.Database): void {
-  // Step 1: Add new columns (all nullable initially)
-  db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT NULL`);
-  db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
-  db.exec(`ALTER TABLE users ADD COLUMN managed_by INTEGER DEFAULT NULL`);
+  // Step 1: Add new columns if they don't exist (idempotent for fresh installs)
+  // Check if column exists using sqlite_master
+  const columns = db.prepare(`SELECT name FROM pragma_table_info('users')`).all() as Array<{name: string}>;
+  const columnNames = new Set(columns.map(c => c.name));
 
-  // Step 2: Create index for managed_by foreign key
-  db.exec(`CREATE INDEX idx_users_managed_by ON users(managed_by)`);
+  if (!columnNames.has('role')) {
+    db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT NULL`);
+  }
+  if (!columnNames.has('is_super_admin')) {
+    db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
+  }
+  if (!columnNames.has('managed_by')) {
+    db.exec(`ALTER TABLE users ADD COLUMN managed_by INTEGER DEFAULT NULL`);
+  }
+
+  // Step 2: Create index for managed_by foreign key (if not exists)
+  const indexes = db.prepare(`SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='users'`).all() as Array<{name: string}>;
+  const indexNames = new Set(indexes.map(i => i.name));
+
+  if (!indexNames.has('idx_users_managed_by')) {
+    db.exec(`CREATE INDEX idx_users_managed_by ON users(managed_by)`);
+  }
 
   console.log('✓ Added role, is_super_admin, managed_by columns to users');
 }

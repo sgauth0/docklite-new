@@ -1,0 +1,75 @@
+#!/bin/bash
+export TERM=xterm-256color
+
+CYAN=$(tput setaf 6 2>/dev/null || true)
+MAGENTA=$(tput setaf 5 2>/dev/null || true)
+GREEN=$(tput setaf 2 2>/dev/null || true)
+YELLOW=$(tput setaf 3 2>/dev/null || true)
+RED=$(tput setaf 1 2>/dev/null || true)
+BLUE=$(tput setaf 4 2>/dev/null || true)
+BOLD=$(tput bold 2>/dev/null || true)
+RESET=$(tput sgr0 2>/dev/null || true)
+
+DIV="${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+# ── read config ───────────────────────────────────────────────────────────────
+AGENT_ENV="/etc/docklite/docklite-agent.env"
+AGENT_PORT="3000"
+INSTALL_DIR=""
+
+if [[ -f "$AGENT_ENV" ]]; then
+  _addr="$(grep -E '^LISTEN_ADDR=' "$AGENT_ENV" 2>/dev/null | cut -d: -f2)"
+  [[ -n "$_addr" ]] && AGENT_PORT="$_addr"
+  _db="$(grep -E '^DATABASE_PATH=' "$AGENT_ENV" 2>/dev/null | cut -d= -f2-)"
+  [[ -n "$_db" ]] && INSTALL_DIR="$(dirname "$_db")"
+fi
+
+# ── version ───────────────────────────────────────────────────────────────────
+VERSION="dev"
+for _vf in "${INSTALL_DIR}/../VERSION" "${INSTALL_DIR}/VERSION" /opt/docklite/VERSION; do
+  if [[ -f "$_vf" ]]; then
+    VERSION="$(cat "$_vf" 2>/dev/null | tr -d '[:space:]')"
+    break
+  fi
+done
+
+# ── agent status ──────────────────────────────────────────────────────────────
+AGENT_STATUS="${RED}${BOLD}stopped${RESET}"
+AGENT_TOKEN="$(grep -E '^DOCKLITE_TOKEN=' "$AGENT_ENV" 2>/dev/null | cut -d= -f2-)"
+if curl -sf --max-time 1 \
+    -H "Authorization: Bearer ${AGENT_TOKEN}" \
+    "http://localhost:${AGENT_PORT}/api/health" >/dev/null 2>&1; then
+  AGENT_STATUS="${GREEN}${BOLD}running${RESET}"
+fi
+
+# ── docker stats ──────────────────────────────────────────────────────────────
+CONTAINERS=""
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  _running=$(docker ps -q 2>/dev/null | wc -l)
+  _total=$(docker ps -aq 2>/dev/null | wc -l)
+  CONTAINERS="${GREEN}${_running}${RESET} running / ${BLUE}${_total}${RESET} total"
+fi
+
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+
+# ── banner ────────────────────────────────────────────────────────────────────
+printf "\n"
+printf "    ${CYAN}${BOLD}██████╗  ██████╗  ██████╗██╗  ██╗${RESET}${MAGENTA}${BOLD}██╗     ██╗████████╗███████╗${RESET}\n"
+printf "    ${CYAN}${BOLD}██╔══██╗██╔═══██╗██╔════╝██║ ██╔╝${RESET}${MAGENTA}${BOLD}██║     ██║╚══██╔══╝██╔════╝${RESET}\n"
+printf "    ${CYAN}${BOLD}██║  ██║██║   ██║██║     █████╔╝ ${RESET}${MAGENTA}${BOLD}██║     ██║   ██║   █████╗  ${RESET}\n"
+printf "    ${CYAN}${BOLD}██║  ██║██║   ██║██║     ██╔═██╗ ${RESET}${MAGENTA}${BOLD}██║     ██║   ██║   ██╔══╝  ${RESET}\n"
+printf "    ${CYAN}${BOLD}██████╔╝╚██████╔╝╚██████╗██║  ██╗${RESET}${MAGENTA}${BOLD}███████╗██║   ██║   ███████╗${RESET}\n"
+printf "    ${CYAN}${BOLD}╚═════╝  ╚═════╝  ╚═════╝╚═╝  ╚═╝${RESET}${MAGENTA}${BOLD}╚══════╝╚═╝   ╚═╝   ╚══════╝${RESET}\n"
+printf "\n"
+printf "    ${MAGENTA}${BOLD}Container Management Made Simple${RESET}  ${BLUE}v${VERSION}${RESET}\n"
+printf "${DIV}\n\n"
+
+# ── info ──────────────────────────────────────────────────────────────────────
+printf "  ${GREEN}▸${RESET} ${BOLD}Agent:${RESET}       ${AGENT_STATUS}  ${BLUE}(port ${AGENT_PORT})${RESET}\n"
+printf "  ${GREEN}▸${RESET} ${BOLD}Web UI:${RESET}      ${YELLOW}http://${SERVER_IP}:${AGENT_PORT}${RESET}\n"
+[[ -n "$CONTAINERS" ]] && \
+printf "  ${GREEN}▸${RESET} ${BOLD}Containers:${RESET}  ${CONTAINERS}\n"
+printf "\n"
+printf "  ${GREEN}▸${RESET} ${BOLD}Docs:${RESET}        ${CYAN}https://github.com/sgauth0/docklite${RESET}\n"
+printf "\n"
+printf "${DIV}\n\n"

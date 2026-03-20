@@ -1,0 +1,78 @@
+# DockLite specific
+*.pid
+data/
+logs/
+.docklite-token
+.docklite-session
+
+# Built binaries
+bin/docklite-agent
+bin/docklite-tui
+
+# Go binaries in source tree
+go-app/docklite-agent
+cli-repo/docklite-tui
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+.vercel
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.log
+tmp/
+temp/
+.cache/
+
+# Local backup of git directory
+.git.bak
+.gitignore.root.bak

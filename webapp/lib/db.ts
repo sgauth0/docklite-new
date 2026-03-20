@@ -63,8 +63,10 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS databases (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
+      type TEXT DEFAULT 'postgres',
       container_id TEXT UNIQUE NOT NULL,
       postgres_port INTEGER NOT NULL,
+      db_path TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -102,7 +104,7 @@ async function ensureUserFoldersOnStartup() {
       await ensureAllUserFolders(users);
     }
   } catch (error) {
-    console.error('⚠️ Failed to check user folders on startup:', error);
+    console.error('Failed to check user folders on startup:', error);
   }
 }
 
@@ -118,17 +120,17 @@ function seedAdminUser() {
 
       if (!seedUsername || !seedPassword) {
         if (process.env.NODE_ENV === 'production') {
-          console.warn('⚠️ Skipping admin seed: SEED_ADMIN_USERNAME/SEED_ADMIN_PASSWORD are not set.');
+          console.warn('Skipping admin seed: SEED_ADMIN_USERNAME/SEED_ADMIN_PASSWORD are not set.');
           return;
         }
         const devUsername = 'superadmin';
-        const devPassword = 'admin';
+        const devPassword = 'changeme';
         const passwordHash = bcrypt.hashSync(devPassword, 10);
         db.prepare(`
           INSERT INTO users (username, password_hash, is_admin, role, is_super_admin, managed_by)
           VALUES (?, ?, 1, 'super_admin', 1, NULL)
         `).run(devUsername, passwordHash);
-        console.log(`✓ Superadmin user created (username: ${devUsername}, password: ${devPassword})`);
+        console.log(`✓ Superadmin user created (username: ${devUsername}, password: ${devPassword}) — CHANGE THIS PASSWORD`);
         return;
       }
 
@@ -207,7 +209,7 @@ export function updateUserPassword(userId: number, password: string): void {
 }
 
 export function clearUserSessions(userId: number): void {
-  console.warn(`⚠️ clearUserSessions(${userId}) called: session storage uses cookies only.`);
+  console.warn(`clearUserSessions(${userId}) called: session storage uses cookies only.`);
 }
 
 export function getUserSiteCount(userId: number): number {
@@ -337,9 +339,9 @@ export function getAllDatabases(): DatabaseType[] {
 
 export function createDatabase(params: CreateDatabaseParams): DatabaseType {
   const result = db.prepare(`
-    INSERT INTO databases (name, container_id, postgres_port)
-    VALUES (?, ?, ?)
-  `).run(params.name, params.container_id, params.postgres_port);
+    INSERT INTO databases (name, type, container_id, postgres_port, db_path)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(params.name, params.type, params.container_id, params.postgres_port, params.db_path || null);
 
   return getDatabaseById(result.lastInsertRowid as number)!;
 }

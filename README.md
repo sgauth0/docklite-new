@@ -13,6 +13,68 @@ The complete DockLite stack - a minimal Docker management system with three mode
 - **Headless mode** - Run the agent without any GUI
 - **Full-stack mode** - Complete web interface + API + TUI
 
+## Quick Start (3 Commands)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/sgauth0/docklite-new.git
+cd docklite-new
+
+# 2. Run the installer (checks deps, builds binaries, installs npm packages)
+./install.sh
+
+# 3. Start everything
+./start-fullstack.sh
+```
+
+Then open http://localhost:3000 in your browser!
+
+**For remote servers:** Access via your server's IP address:
+```
+http://YOUR_SERVER_IP:3000
+```
+
+**Default credentials:**
+- Username: `superadmin`
+- Password: `admin`
+
+## System Requirements
+
+- **Docker** 20.10+ (required)
+- **Node.js** 18+ (for web GUI)
+- **Go** 1.22+ (only needed if building from source)
+
+## Installation Methods
+
+### Method 1: Quick Install (Recommended)
+
+Run the included installer script which checks dependencies and builds binaries:
+
+```bash
+./install.sh              # Standard install
+./install.sh --full        # Full install with systemd services
+./install.sh --skip-build  # Use pre-built binaries
+./install.sh --help        # Show all options
+```
+
+### Method 2: Manual Install
+
+```bash
+# 1. Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# 2. Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 3. Build binaries (requires Go)
+./build.sh    # Or use: make build-all
+
+# 4. Start
+./start-fullstack.sh
+```
+
 ## Quick Start Options
 
 ### Option 1: Full Stack (Web GUI + Agent + TUI)
@@ -22,7 +84,7 @@ The complete DockLite stack - a minimal Docker management system with three mode
 ./start-fullstack.sh
 ```
 
-Then open http://localhost:3000 in your browser!
+Then open http://localhost:3000 in your browser (or http://YOUR_SERVER_IP:3000 for remote access)
 
 ### Option 2: Headless Mode (Agent Only)
 
@@ -53,6 +115,43 @@ make run-gui
 make run-tui
 ```
 
+## System Requirements
+
+- **Docker** 20.10+ (required)
+- **Node.js** 18+ (for web GUI)
+- **Go** 1.22+ (only needed if building from source)
+
+## Installation Methods
+
+### Method 1: Quick Install (Recommended)
+
+Run the included installer script which checks dependencies and builds binaries:
+
+```bash
+./install.sh              # Standard install
+./install.sh --full        # Full install with systemd services
+./install.sh --skip-build  # Use pre-built binaries
+./install.sh --help        # Show all options
+```
+
+### Method 2: Manual Install
+
+```bash
+# 1. Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# 2. Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 3. Build binaries (requires Go)
+./build.sh    # Or use: make build-all
+
+# 4. Start
+./start-fullstack.sh
+```
+
 ## Features
 
 **Web GUI (Next.js):**
@@ -81,13 +180,22 @@ make run-tui
 - Optional Next.js GUI proxy
 - Single binary deployment
 
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `install.sh` | Quick installer - checks deps, builds binaries, installs npm packages |
+| `build.sh` | Build all binaries and prepare for distribution |
+| `start-fullstack.sh` | Start GUI + Agent together (recommended) |
+| `start-agent.sh` | Start agent in headless mode |
+| `start-tui.sh` | Start TUI client |
+| `stop-all.sh` | Stop all running services |
+
 ## Documentation
 
+- **[INSTALL.md](INSTALL.md)** - Detailed Ubuntu/Debian installation guide
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with all modes
-- **[start-fullstack.sh](start-fullstack.sh)** - Start GUI + Agent together
-- **[start-agent.sh](start-agent.sh)** - Agent startup script (headless)
-- **[start-tui.sh](start-tui.sh)** - TUI client startup script
-- **[stop-all.sh](stop-all.sh)** - Stop all running services
+- **[CLAUDE.md](CLAUDE.md)** - Developer documentation
 
 ## Architecture
 
@@ -144,8 +252,7 @@ NEXTJS_URL=disabled ./bin/docklite-agent
 ## Building from Source
 
 Requirements:
-- Go 1.21+ (TUI)
-- Go 1.24+ (Agent)
+- Go 1.22+ (Agent and TUI)
 - Node.js 18+ (GUI)
 
 ```bash

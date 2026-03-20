@@ -19,7 +19,7 @@ export async function listContainers(managedOnly: boolean = true): Promise<Conta
         : undefined,
     });
 
-    return containers.map(container => {
+    return containers.map((container: any) => {
       const created = new Date(container.Created * 1000);
       const now = new Date();
       const uptime = formatUptime(now.getTime() - created.getTime());
@@ -139,7 +139,7 @@ export async function getContainerLogs(id: string, tail: number = 100): Promise<
     // Convert buffer to string and clean up
     return logs.toString('utf8')
       .split('\n')
-      .map(line => line.replace(/[\x00-\x08]/g, '')) // Remove control characters
+      .map((line: string) => line.replace(/[\x00-\x08]/g, '')) // Remove control characters
       .join('\n');
   } catch (error: any) {
     console.error(`Error getting logs for container ${id}:`, error);
@@ -184,7 +184,7 @@ export async function getContainerStats(id: string): Promise<ContainerStats | nu
 // CREATE CONTAINER
 // ============================================
 
-export async function createContainer(config: Docker.ContainerCreateOptions): Promise<string> {
+export async function createContainer(config: any): Promise<string> {
   const networkMode = config.HostConfig?.NetworkMode;
   if (networkMode && typeof networkMode === 'string') {
     await ensureNetworkExists(networkMode);
@@ -210,7 +210,7 @@ export async function createContainer(config: Docker.ContainerCreateOptions): Pr
 async function ensureNetworkExists(name: string, forceCreate: boolean = false): Promise<void> {
   try {
     const networks = await docker.listNetworks({ filters: { name: [name] } });
-    if (!forceCreate && networks.some(network => network.Name === name)) {
+    if (!forceCreate && networks.some((network: any) => network.Name === name)) {
       return;
     }
     if (forceCreate || networks.length === 0) {
@@ -241,7 +241,7 @@ function formatUptime(ms: number): string {
   return `${seconds}s`;
 }
 
-function formatPorts(ports: Docker.Port[]): string {
+function formatPorts(ports: any[]): string {
   if (!ports || ports.length === 0) return '-';
 
   return ports

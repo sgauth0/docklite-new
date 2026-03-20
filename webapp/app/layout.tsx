@@ -1,9 +1,14 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ThemeInit from './theme-init'
 
 export const metadata: Metadata = {
   title: 'DockLite - Docker Control Panel',
   description: 'Simple Docker-based web hosting control panel',
+  icons: {
+    icon: '/dockliteiconL.png',
+    apple: '/dockliteiconL.png',
+  },
 }
 
 export default function RootLayout({
@@ -13,7 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50">{children}</body>
+      <body>
+        <ThemeInit />
+        {children}
+      </body>
     </html>
   )
 }

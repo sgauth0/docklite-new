@@ -8,19 +8,21 @@ import (
 type DatabaseRecord struct {
 	ID           int64  `json:"id"`
 	Name         string `json:"name"`
+	Type         string `json:"type"`
 	ContainerID  string `json:"container_id"`
 	PostgresPort int    `json:"postgres_port"`
+	DBPath       string `json:"db_path,omitempty"`
 	CreatedAt    string `json:"created_at"`
 }
 
 func (s *SQLiteStore) GetDatabaseByID(id int64) (*DatabaseRecord, error) {
 	row := s.DB.QueryRow(`
-    SELECT id, name, container_id, postgres_port, created_at
+    SELECT id, name, COALESCE(type, 'postgres'), container_id, postgres_port, COALESCE(db_path, ''), created_at
     FROM databases
     WHERE id = ?
   `, id)
 	var record DatabaseRecord
-	if err := row.Scan(&record.ID, &record.Name, &record.ContainerID, &record.PostgresPort, &record.CreatedAt); err != nil {
+	if err := row.Scan(&record.ID, &record.Name, &record.Type, &record.ContainerID, &record.PostgresPort, &record.DBPath, &record.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -31,12 +33,12 @@ func (s *SQLiteStore) GetDatabaseByID(id int64) (*DatabaseRecord, error) {
 
 func (s *SQLiteStore) GetDatabaseByName(name string) (*DatabaseRecord, error) {
 	row := s.DB.QueryRow(`
-    SELECT id, name, container_id, postgres_port, created_at
+    SELECT id, name, COALESCE(type, 'postgres'), container_id, postgres_port, COALESCE(db_path, ''), created_at
     FROM databases
     WHERE name = ?
   `, name)
 	var record DatabaseRecord
-	if err := row.Scan(&record.ID, &record.Name, &record.ContainerID, &record.PostgresPort, &record.CreatedAt); err != nil {
+	if err := row.Scan(&record.ID, &record.Name, &record.Type, &record.ContainerID, &record.PostgresPort, &record.DBPath, &record.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -45,9 +47,12 @@ func (s *SQLiteStore) GetDatabaseByName(name string) (*DatabaseRecord, error) {
 	return &record, nil
 }
 
-func (s *SQLiteStore) UpsertDatabase(name string, containerID string, port int) (*DatabaseRecord, error) {
+func (s *SQLiteStore) UpsertDatabase(name string, dbType string, containerID string, port int, dbPath string) (*DatabaseRecord, error) {
 	if name == "" {
 		return nil, fmt.Errorf("database name is required")
+	}
+	if dbType == "" {
+		dbType = "postgres"
 	}
 	existing, err := s.GetDatabaseByName(name)
 	if err != nil {
@@ -56,20 +61,22 @@ func (s *SQLiteStore) UpsertDatabase(name string, containerID string, port int) 
 	if existing != nil {
 		if _, err := s.DB.Exec(`
       UPDATE databases
-      SET container_id = ?, postgres_port = ?
+      SET type = ?, container_id = ?, postgres_port = ?, db_path = ?
       WHERE id = ?
-    `, containerID, port, existing.ID); err != nil {
+    `, dbType, containerID, port, dbPath, existing.ID); err != nil {
 			return nil, err
 		}
+		existing.Type = dbType
 		existing.ContainerID = containerID
 		existing.PostgresPort = port
+		existing.DBPath = dbPath
 		return existing, nil
 	}
 
 	result, err := s.DB.Exec(`
-    INSERT INTO databases (name, container_id, postgres_port)
-    VALUES (?, ?, ?)
-  `, name, containerID, port)
+    INSERT INTO databases (name, type, container_id, postgres_port, db_path)
+    VALUES (?, ?, ?, ?, ?)
+  `, name, dbType, containerID, port, dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +89,7 @@ func (s *SQLiteStore) UpsertDatabase(name string, containerID string, port int) 
 
 func (s *SQLiteStore) ListDatabases() ([]DatabaseRecord, error) {
 	rows, err := s.DB.Query(`
-    SELECT id, name, container_id, postgres_port, created_at
+    SELECT id, name, COALESCE(type, 'postgres'), container_id, postgres_port, COALESCE(db_path, ''), created_at
     FROM databases
     ORDER BY created_at DESC
   `)
@@ -94,7 +101,7 @@ func (s *SQLiteStore) ListDatabases() ([]DatabaseRecord, error) {
 	var records []DatabaseRecord
 	for rows.Next() {
 		var record DatabaseRecord
-		if err := rows.Scan(&record.ID, &record.Name, &record.ContainerID, &record.PostgresPort, &record.CreatedAt); err != nil {
+		if err := rows.Scan(&record.ID, &record.Name, &record.Type, &record.ContainerID, &record.PostgresPort, &record.DBPath, &record.CreatedAt); err != nil {
 			return nil, err
 		}
 		records = append(records, record)
@@ -104,7 +111,7 @@ func (s *SQLiteStore) ListDatabases() ([]DatabaseRecord, error) {
 
 func (s *SQLiteStore) ListDatabasesByUser(userID int64) ([]DatabaseRecord, error) {
 	rows, err := s.DB.Query(`
-    SELECT d.id, d.name, d.container_id, d.postgres_port, d.created_at
+    SELECT d.id, d.name, COALESCE(d.type, 'postgres'), d.container_id, d.postgres_port, COALESCE(d.db_path, ''), d.created_at
     FROM databases d
     JOIN database_permissions dp ON d.id = dp.database_id
     WHERE dp.user_id = ?
@@ -118,7 +125,7 @@ func (s *SQLiteStore) ListDatabasesByUser(userID int64) ([]DatabaseRecord, error
 	var records []DatabaseRecord
 	for rows.Next() {
 		var record DatabaseRecord
-		if err := rows.Scan(&record.ID, &record.Name, &record.ContainerID, &record.PostgresPort, &record.CreatedAt); err != nil {
+		if err := rows.Scan(&record.ID, &record.Name, &record.Type, &record.ContainerID, &record.PostgresPort, &record.DBPath, &record.CreatedAt); err != nil {
 			return nil, err
 		}
 		records = append(records, record)

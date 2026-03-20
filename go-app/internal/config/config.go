@@ -7,6 +7,7 @@ const (
 	defaultDockerSocket = "unix:///var/run/docker.sock"
 	defaultDatabasePath = "data/docklite.db"
 	defaultNextjsURL    = "http://localhost:3001"
+	defaultBackupBase   = "/var/backups/docklite"
 )
 
 type Config struct {
@@ -15,6 +16,7 @@ type Config struct {
 	DatabasePath     string
 	Token            string
 	NextjsURL        string
+	BackupBaseDir    string
 }
 
 func Load() Config {
@@ -32,6 +34,7 @@ func Load() Config {
 		DatabasePath:     getEnv("DATABASE_PATH", defaultDatabasePath),
 		Token:            getEnv("DOCKLITE_TOKEN", ""),
 		NextjsURL:        nextjsURL,
+		BackupBaseDir:    getEnv("BACKUP_BASE_DIR", defaultBackupBase),
 	}
 }
 

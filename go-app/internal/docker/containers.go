@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -134,6 +135,12 @@ func (c *Client) CreateSiteContainer(ctx context.Context, domain string, templat
 		return "", err
 	}
 
+	// Node containers run as the agent's UID:GID so files they write into the
+	// bind-mount stay owned by 'docklite' on the host.
+	// Static (nginx) and PHP containers must start as root (port 80 / supervisord),
+	// so we leave their User field empty.
+	agentUser := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+
 	imageName := staticImageName
 	internalPort := 80
 	bindTarget := "/usr/share/nginx/html"
@@ -141,6 +148,7 @@ func (c *Client) CreateSiteContainer(ctx context.Context, domain string, templat
 	var env []string
 	var cmd []string
 	workingDir := ""
+	containerUser := ""
 
 	switch templateType {
 	case "php":
@@ -166,9 +174,11 @@ func (c *Client) CreateSiteContainer(ctx context.Context, domain string, templat
 		env = []string{
 			"NODE_ENV=production",
 			fmt.Sprintf("PORT=%d", internalPort),
+			"HOST=0.0.0.0",
 		}
-		cmd = []string{"npm", "start"}
+		cmd = []string{"node", "index.js"}
 		workingDir = "/app"
+		containerUser = agentUser
 	case "static":
 	default:
 		return "", fmt.Errorf("unsupported template type: %s", templateType)
@@ -193,6 +203,7 @@ func (c *Client) CreateSiteContainer(ctx context.Context, domain string, templat
 		Env:          env,
 		Cmd:          cmd,
 		WorkingDir:   workingDir,
+		User:         containerUser,
 	}
 	hostConfig := &container.HostConfig{
 		Binds: []string{
@@ -220,14 +231,54 @@ func (c *Client) CreateSiteContainer(ctx context.Context, domain string, templat
 	return resp.ID, nil
 }
 
+// PrewarmImages pulls the standard site images in the background so they are
+// cached before the first container creation request arrives. This prevents
+// long image pulls from blocking an HTTP handler and causing proxy timeouts.
+func (c *Client) PrewarmImages(ctx context.Context) {
+	images := []string{staticImageName, phpImageName, nodeImageName}
+	for _, img := range images {
+		go func(name string) {
+			pullCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+			defer cancel()
+			if err := c.pullImage(pullCtx, name); err != nil {
+				// Non-fatal — the image will be pulled on first use instead.
+				_ = err
+			}
+		}(img)
+	}
+}
+
 func (c *Client) pullImage(ctx context.Context, imageName string) error {
-	reader, err := c.Client.ImagePull(ctx, imageName, image.PullOptions{})
+	// Check if image already exists locally to avoid a network round-trip.
+	if c.imageExists(ctx, imageName) {
+		return nil
+	}
+	// Use an independent long-timeout context so the pull is not bound to
+	// the lifetime of an incoming HTTP request.
+	pullCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	reader, err := c.Client.ImagePull(pullCtx, imageName, image.PullOptions{})
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 	_, _ = io.Copy(io.Discard, reader)
 	return nil
+}
+
+func (c *Client) imageExists(ctx context.Context, imageName string) bool {
+	images, err := c.Client.ImageList(ctx, image.ListOptions{})
+	if err != nil {
+		return false
+	}
+	for _, img := range images {
+		for _, tag := range img.RepoTags {
+			if tag == imageName || tag == imageName+":latest" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *Client) ensureNetwork(ctx context.Context, name string) error {
@@ -303,33 +354,26 @@ func formatPorts(ports []types.Port) string {
 	return strings.Join(parts, ", ")
 }
 
-func buildHostRule(domain string, includeWww bool) string {
-	normalized := strings.ToLower(strings.TrimSpace(domain))
-	if includeWww && !strings.HasPrefix(normalized, "www.") {
-		return fmt.Sprintf("Host(`%s`,`www.%s`)", normalized, normalized)
-	}
-	return fmt.Sprintf("Host(`%s`)", normalized)
-}
-
 func buildSiteLabels(domain string, includeWww bool, templateType string, internalPort int, siteID int64, userID int64, folderID *int64) map[string]string {
-	sanitized := sanitizeDomain(domain)
-	hostRule := buildHostRule(domain, includeWww)
 	folderValue := ""
 	if folderID != nil {
 		folderValue = fmt.Sprintf("%d", *folderID)
 	}
 	return map[string]string{
-		"docklite.managed":   "true",
-		"docklite.site.id":   fmt.Sprintf("%d", siteID),
-		"docklite.domain":    domain,
-		"docklite.type":      templateType,
-		"docklite.user.id":   fmt.Sprintf("%d", userID),
-		"docklite.folder.id": folderValue,
-		"traefik.enable":     "true",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.rule", sanitized):                      hostRule,
-		fmt.Sprintf("traefik.http.routers.docklite-%s.entrypoints", sanitized):               "websecure",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.tls", sanitized):                       "true",
-		fmt.Sprintf("traefik.http.routers.docklite-%s.tls.certresolver", sanitized):          "letsencrypt",
-		fmt.Sprintf("traefik.http.services.docklite-%s.loadbalancer.server.port", sanitized): fmt.Sprintf("%d", internalPort),
+		"docklite.managed":       "true",
+		"docklite.site.id":       fmt.Sprintf("%d", siteID),
+		"docklite.domain":        domain,
+		"docklite.type":          templateType,
+		"docklite.user.id":       fmt.Sprintf("%d", userID),
+		"docklite.folder.id":     folderValue,
+		"docklite.include_www":   boolToLabel(includeWww),
+		"docklite.internal_port": fmt.Sprintf("%d", internalPort),
 	}
+}
+
+func boolToLabel(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
 }
